@@ -41,7 +41,6 @@ const path = stripBase(Astro.url.pathname);
     </nav>
 
     <div class="header__actions">
-      <OpenStatus class="header__status" />
       <a class="header__phone" href={site.contacts.phone.href}>
         {site.contacts.phone.display}
       </a>
@@ -221,8 +220,8 @@ const path = stripBase(Astro.url.pathname);
 
     // Возврат на десктопную ширину при открытом меню не должен
     // оставлять страницу заблокированной.
-    // Порог совпадает с медиазапросом ниже: 66rem.
-    const wide = window.matchMedia('(min-width: 66rem)');
+    // Порог совпадает с медиазапросом ниже: 72rem.
+    const wide = window.matchMedia('(min-width: 72rem)');
     wide.addEventListener('change', (e) => {
       if (e.matches && toggle.getAttribute('aria-expanded') === 'true') setOpen(false);
     });
@@ -322,9 +321,16 @@ const path = stripBase(Astro.url.pathname);
 
   /* Навигация — единственный блок, которому можно сжиматься:
      логотип и кнопка брони должны остаться целыми. */
+  /* Если содержимое всё же не поместится, пункты не обрежутся и не
+     налезут на соседей, а станут прокручиваемыми: потерять пункт меню
+     хуже, чем показать полосу прокрутки. */
   .header__nav {
     min-inline-size: 0;
-    overflow: clip;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .header__nav::-webkit-scrollbar {
+    display: none;
   }
 
   .header__list {
@@ -424,34 +430,26 @@ const path = stripBase(Astro.url.pathname);
 
   /* --- Мобильная раскладка --- */
   /**
-   * Что уходит при нехватке места.
+   * Что помещается в шапку.
    *
-   * Индикатор «открыто» показываем только на широких экранах, где под
-   * него есть место в контейнере шапки. Он и так есть на первом экране,
-   * в подвале и на странице контактов, так что потери нет.
-   * Условие по окну, а не по контейнеру: до 96rem контейнер равен окну
-   * за вычетом полей, а выше — упирается в свой предел.
+   * Замеры по живой странице: логотип 148, навигация с промежутками 538,
+   * телефон 222, кнопка 230, внешние промежутки 72 — итого 1210 px
+   * при контейнере 1344. Запас 134 px.
+   *
+   * Индикатора «открыто» здесь больше нет: строка «Закрыто · откроется
+   * сегодня в 17:00» занимала 340 px — больше телефона и кнопки вместе,
+   * и именно из-за неё обрезалась навигация. Индикатор остался на первом
+   * экране, в подвале и на странице контактов.
    */
-  .header__status {
-    display: none;
-  }
-
-  @media (min-width: 96rem) {
-    .header__status {
-      display: inline-flex;
-    }
-  }
-
-  /* Телефон уступает место раньше: он есть в подвале и в контактах. */
-  @media (max-width: 76rem) {
+  @media (max-width: 88rem) {
     .header__phone {
       display: none;
     }
   }
 
-  /* 66rem, а не 60: при 60 десктопная навигация ещё показывалась,
-     но места ей уже не хватало — пункты упирались в кнопку брони. */
-  @media (max-width: 66rem) {
+  /* 72rem: ниже этого навигация с логотипом и кнопкой перестают
+     помещаться, и вместо них показывается бургер. */
+  @media (max-width: 72rem) {
     .header__inner {
       grid-template-columns: auto 1fr;
     }
