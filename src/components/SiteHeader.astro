@@ -221,7 +221,8 @@ const path = stripBase(Astro.url.pathname);
 
     // Возврат на десктопную ширину при открытом меню не должен
     // оставлять страницу заблокированной.
-    const wide = window.matchMedia('(min-width: 60rem)');
+    // Порог совпадает с медиазапросом ниже: 66rem.
+    const wide = window.matchMedia('(min-width: 66rem)');
     wide.addEventListener('change', (e) => {
       if (e.matches && toggle.getAttribute('aria-expanded') === 'true') setOpen(false);
     });
@@ -288,14 +289,26 @@ const path = stripBase(Astro.url.pathname);
     backdrop-filter: none;
   }
 
+  /**
+   * Сетка из трёх колонок: логотип — навигация — действия.
+   *
+   * Раньше это был flex, и при нехватке места пункты меню (у них
+   * запрещён перенос, поэтому сжиматься им некуда) вылезали за свою
+   * границу и рисовались поверх индикатора и телефона. В сетке колонка
+   * навигации ограничена треком minmax(0, 1fr) и с overflow: clip
+   * не может залезть к соседям физически.
+   */
   .header__inner {
-    display: flex;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
     gap: var(--space-m);
     min-block-size: 72px;
-    /* Ничто в шапке не должно вылезать за пределы контейнера:
-       раньше кнопка брони уезжала под правый край окна. */
-    flex-wrap: nowrap;
+    /* Шапке нужен свой контейнер: в общие 78rem её содержимое
+       не помещалось примерно на 40 пикселей. Свойство то же, что
+       у .container на этом же элементе, — иначе выиграло бы
+       ограничение в 78rem и правка ничего не изменила бы. */
+    max-width: var(--container-header);
   }
 
   .header__brand {
@@ -310,15 +323,15 @@ const path = stripBase(Astro.url.pathname);
   /* Навигация — единственный блок, которому можно сжиматься:
      логотип и кнопка брони должны остаться целыми. */
   .header__nav {
-    margin-inline: auto;
     min-inline-size: 0;
-    flex: 0 1 auto;
+    overflow: clip;
   }
 
   .header__list {
     display: flex;
     align-items: center;
-    gap: clamp(var(--space-2xs), 1.4vw, var(--space-l));
+    justify-content: center;
+    gap: clamp(var(--space-2xs), 1.1vw, var(--space-m));
     margin: 0;
     flex-wrap: nowrap;
   }
@@ -363,8 +376,8 @@ const path = stripBase(Astro.url.pathname);
   .header__actions {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     gap: var(--space-s);
-    flex: none;
   }
 
   .header__phone {
@@ -383,7 +396,7 @@ const path = stripBase(Astro.url.pathname);
     justify-content: center;
     inline-size: 44px;
     block-size: 44px;
-    margin-inline-start: auto;
+    justify-self: end;
     background: none;
     border: 0;
     color: var(--c-paper);
@@ -410,22 +423,38 @@ const path = stripBase(Astro.url.pathname);
   }
 
   /* --- Мобильная раскладка --- */
-  /* Порядок отступления при сужении: сначала уходит индикатор «открыто»
-     (он есть на первом экране и в подвале), затем телефон (он в подвале
-     и на странице контактов). Кнопка брони остаётся до последнего. */
-  @media (max-width: 86rem) {
+  /**
+   * Что уходит при нехватке места.
+   *
+   * Индикатор «открыто» показываем только на широких экранах, где под
+   * него есть место в контейнере шапки. Он и так есть на первом экране,
+   * в подвале и на странице контактов, так что потери нет.
+   * Условие по окну, а не по контейнеру: до 96rem контейнер равен окну
+   * за вычетом полей, а выше — упирается в свой предел.
+   */
+  .header__status {
+    display: none;
+  }
+
+  @media (min-width: 96rem) {
     .header__status {
-      display: none;
+      display: inline-flex;
     }
   }
 
+  /* Телефон уступает место раньше: он есть в подвале и в контактах. */
   @media (max-width: 76rem) {
     .header__phone {
       display: none;
     }
   }
 
-  @media (max-width: 60rem) {
+  /* 66rem, а не 60: при 60 десктопная навигация ещё показывалась,
+     но места ей уже не хватало — пункты упирались в кнопку брони. */
+  @media (max-width: 66rem) {
+    .header__inner {
+      grid-template-columns: auto 1fr;
+    }
     .header__nav,
     .header__actions {
       display: none;
