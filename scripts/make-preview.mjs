@@ -146,6 +146,17 @@ async function inlinePage(htmlPath) {
     html = html.replace(tag, next);
   }
 
+  // --- Всё, что осталось ссылками на собранные файлы ---
+  // Логотип, например, подставляется CSS-маской прямо в атрибуте style,
+  // а не тегом <img>: без этого прохода знак в просмотрщике оказался бы
+  // пустым — файла-то рядом нет.
+  const leftovers = new Set(
+    [...html.matchAll(/\/_astro\/[A-Za-z0-9_.-]+\.(?:png|jpe?g|webp|svg|woff2)/g)].map((m) => m[0]),
+  );
+  for (const ref of leftovers) {
+    html = html.replaceAll(ref, await dataUri(ref));
+  }
+
   return html;
 }
 
