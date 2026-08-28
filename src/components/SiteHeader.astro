@@ -45,7 +45,7 @@ const path = stripBase(Astro.url.pathname);
       <a class="header__phone" href={site.contacts.phone.href}>
         {site.contacts.phone.display}
       </a>
-      <Button href={site.reservations.telegram} variant="primary" size="sm" external>
+      <Button href={withBase('/kontakty#bron')} variant="primary" size="sm">
         Забронировать
       </Button>
     </div>
@@ -114,7 +114,7 @@ const path = stripBase(Astro.url.pathname);
         {site.contacts.phone.display}
       </a>
       <div class="mobile-nav__buttons">
-        <Button href={site.reservations.telegram} variant="primary" size="md" external wide>
+        <Button href={withBase('/kontakty#bron')} variant="primary" size="md" wide>
           Забронировать стол
         </Button>
         <Button href={site.external.delivery.href} variant="ghost" size="md" external wide>

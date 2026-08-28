@@ -1,0 +1,157 @@
+---
+import { getCollection } from 'astro:content';
+import Button from '@/components/Button.astro';
+import { withBase } from '@/lib/url';
+
+/**
+ * Витрина авторских коктейлей.
+ *
+ * Самый недоиспользованный аргумент заведения: в барной карте лежат
+ * позиции с настоящими названиями и составами — гречишный джин,
+ * саган-дайля, травяные биттеры. На прежнем сайте всё это было
+ * запечатано внутри сканов и не работало вообще.
+ *
+ * Позиции не дублируются здесь текстом, а берутся из самого меню
+ * по флагу `featured` — поменяется карта, поменяется и главная.
+ */
+const sections = await getCollection('menu');
+
+const drinks = sections
+  .filter((s) => s.data.card === 'bar')
+  .flatMap((s) => s.data.items.map((item) => ({ item, section: s })))
+  .filter(({ item }) => item.featured)
+  .slice(0, 4);
+
+const price = (n: number) => `${n.toLocaleString('ru-RU').replace(/\s/g, ' ')} ₽`;
+---
+
+{
+  drinks.length > 0 && (
+    <section class="drinks">
+      <div class="container">
+        <div class="drinks__head">
+          <div>
+            <p class="eyebrow" data-reveal>
+              Барная карта
+            </p>
+            <h2 class="drinks__title" data-reveal>
+              Коктейли, которые придумали здесь
+            </h2>
+            <p class="drinks__lede" data-reveal>
+              Гречишный джин, саган-дайля, травяные биттеры и ягодные кордиалы.
+              Рядом — вся классика, которую спрашивают.
+            </p>
+          </div>
+          <div class="drinks__action" data-reveal>
+            <Button href={withBase('/menu#bar-kulturnye-kokteyli')} variant="secondary" size="md">
+              Вся барная карта
+            </Button>
+          </div>
+        </div>
+
+        <ul class="drinks__list" role="list">
+          {drinks.map(({ item }, i) => (
+            <li class="drink" data-reveal style={`--reveal-delay:${i * 70}ms`}>
+              <h3 class="drink__name">{item.name}</h3>
+              {item.description && <p class="drink__descr">{item.description}</p>}
+              <p class="drink__price">
+                {item.price !== undefined ? price(item.price) : ''}
+                {item.measure && <span class="drink__measure">{item.measure}</span>}
+              </p>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  )
+}
+
+<style>
+  .drinks {
+    padding-block: var(--section-y);
+    background:
+      radial-gradient(70% 120% at 15% 0%, var(--c-green-deep), transparent 62%),
+      var(--c-ink);
+    border-block: 1px solid var(--c-line);
+  }
+
+  .drinks__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--space-m) var(--space-l);
+    margin-block-end: var(--space-xl);
+  }
+
+  .drinks__title {
+    margin-block: var(--space-2xs) var(--space-s);
+    font-size: var(--step-4);
+    text-transform: uppercase;
+  }
+
+  .drinks__lede {
+    max-inline-size: 46ch;
+    color: var(--c-paper-dim);
+  }
+
+  .drinks__list {
+    display: grid;
+    gap: var(--space-s);
+    grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr));
+    margin: 0;
+  }
+
+  /* Карточка построена вокруг названия: у этих коктейлей оно и есть
+     приманка. Цена уходит вниз тихой строкой. */
+  .drink {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+    padding: var(--space-m);
+    background: var(--c-surface);
+    border: 1px solid var(--c-line);
+    border-radius: var(--radius-l);
+    transition: border-color var(--dur-base) var(--ease-out);
+  }
+
+  .drink:hover {
+    border-color: var(--c-brass-dim);
+  }
+
+  .drink__name {
+    font-size: var(--step-2);
+    font-weight: 300;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+    color: var(--c-brass);
+  }
+
+  .drink__descr {
+    flex: 1;
+    font-size: var(--step--1);
+    line-height: 1.5;
+    color: var(--c-paper-dim);
+  }
+
+  .drink__price {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-s);
+    margin-block-start: var(--space-s);
+    padding-block-start: var(--space-2xs);
+    border-block-start: 1px solid var(--c-line);
+    font-family: var(--font-display);
+    font-size: var(--step-0);
+    font-weight: 300;
+    font-variant-numeric: tabular-nums;
+    color: var(--c-paper);
+  }
+
+  .drink__measure {
+    font-family: var(--font-text);
+    font-size: var(--step--2);
+    color: var(--c-fg-muted);
+  }
+</style>

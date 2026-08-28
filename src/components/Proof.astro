@@ -1,0 +1,117 @@
+---
+import { site } from '@/data/site';
+
+/**
+ * Оценки гостей.
+ *
+ * До этого на сайте не было ни одного доказательства — только
+ * собственные слова заведения о себе. Здесь три показателя,
+ * и каждый ведёт по ссылке в первоисточник: цифру можно
+ * проверить, не веря на слово.
+ *
+ * Значения сверены вручную, дата проверки хранится рядом
+ * в `site.proof.checkedOn`.
+ */
+---
+
+<section class="proof">
+  <div class="container">
+    <h2 class="visually-hidden">Оценки гостей</h2>
+    <ul class="proof__list" role="list">
+      {
+        site.proof.items.map((item, i) => (
+          <li class="proof__item" data-reveal style={`--reveal-delay:${i * 60}ms`}>
+            {/* Имя ссылки собирается целиком: по отдельным span-ам
+                читатель экрана произносил бы «4,8из 5». */}
+            <a
+              class="proof__link"
+              href={item.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={[
+                'scale' in item && item.scale
+                  ? `${item.rating} из ${item.scale} ${item.label}`
+                  : `${item.label} ${item.rating}`,
+                item.detail,
+                '(откроется в новой вкладке)',
+              ].join(', ')}
+            >
+              <span class="proof__figure" aria-hidden="true">
+                {item.rating}
+                {'scale' in item && item.scale && (
+                  <span class="proof__scale">из {item.scale}</span>
+                )}
+              </span>
+              <span class="proof__label" aria-hidden="true">{item.label}</span>
+              <span class="proof__detail" aria-hidden="true">{item.detail}</span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</section>
+
+<style>
+  .proof {
+    padding-block: var(--space-l);
+    border-block-end: 1px solid var(--c-line);
+    background: var(--c-void);
+  }
+
+  .proof__list {
+    display: grid;
+    gap: var(--space-s);
+    grid-template-columns: repeat(auto-fit, minmax(min(13rem, 100%), 1fr));
+    margin: 0;
+  }
+
+  .proof__item {
+    min-inline-size: 0;
+  }
+
+  .proof__link {
+    display: grid;
+    gap: 0.15rem;
+    padding: var(--space-s) var(--space-m);
+    border: 1px solid var(--c-line);
+    border-radius: var(--radius-m);
+    text-decoration: none;
+    color: inherit;
+    block-size: 100%;
+    transition: border-color var(--dur-base) var(--ease-out);
+  }
+  .proof__link:hover {
+    border-color: var(--c-brass-dim);
+    color: inherit;
+  }
+
+  .proof__figure {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4em;
+    font-family: var(--font-display);
+    font-size: var(--step-3);
+    font-weight: 200;
+    font-variant-numeric: tabular-nums;
+    color: var(--c-brass);
+    line-height: 1.1;
+  }
+
+  .proof__scale {
+    font-size: var(--step--2);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--c-fg-muted);
+  }
+
+  .proof__label {
+    font-size: var(--step--1);
+    color: var(--c-paper);
+  }
+
+  .proof__detail {
+    font-size: var(--step--2);
+    color: var(--c-fg-muted);
+  }
+</style>

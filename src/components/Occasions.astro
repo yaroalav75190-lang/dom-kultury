@@ -1,0 +1,184 @@
+---
+import { withBase } from '@/lib/url';
+import { site } from '@/data/site';
+
+/**
+ * Поводы.
+ *
+ * Гость приходит на сайт не за «баром вообще», а с готовым поводом:
+ * позвать девушку, собраться компанией, отметить день рождения,
+ * закрыть корпоратив. Сайт до этого просто перечислял, что здесь есть,
+ * и человеку приходилось самому догадываться, подходит ли место
+ * под его вечер.
+ *
+ * Каждый повод опирается на то, что у заведения действительно есть —
+ * веранда, программа, банкетное меню, — и ведёт на нужную страницу.
+ * Никаких обещаний вроде «романтическая подсветка», которых
+ * никто не подтверждал.
+ */
+
+const occasions = [
+  {
+    title: 'Вдвоём',
+    text: 'Летняя веранда в тёплый сезон, авторские коктейли и кухня, которая не мешает разговору.',
+    href: '/menu',
+    action: 'Смотреть меню',
+  },
+  {
+    title: 'Компанией',
+    text: 'Стендап, музыкальное лото и dj-сеты. Безлимит игристого каждый день до 20:00.',
+    href: '/afisha',
+    action: 'Что в афише',
+  },
+  {
+    title: 'День рождения',
+    text: 'Отдельная зона или весь зал, свой сет из банкетного меню, программа по желанию.',
+    href: '/bankety',
+    action: 'Как это устроено',
+  },
+  {
+    title: 'Корпоратив',
+    text: 'Фуршет или посадка, готовая площадка под выступления и награждения.',
+    href: '/bankety',
+    action: 'Банкетное меню',
+  },
+];
+---
+
+<section class="occasions section">
+  <div class="container">
+    <div class="occasions__head">
+      <div>
+        <p class="eyebrow" data-reveal>Поводы</p>
+        <h2 class="occasions__title" data-reveal>С чем сюда приходят</h2>
+      </div>
+      <p class="occasions__note" data-reveal>
+        Не нашли свой формат — позвоните:{' '}
+        <a href={site.contacts.phone.href}>{site.contacts.phone.display}</a>
+      </p>
+    </div>
+
+    <ul class="occasions__list" role="list">
+      {
+        occasions.map((occasion, i) => (
+          <li class="occasion" data-reveal style={`--reveal-delay:${i * 60}ms`}>
+            <h3 class="occasion__title">
+              <a class="occasion__link" href={withBase(occasion.href)}>
+                {occasion.title}
+              </a>
+            </h3>
+            <p class="occasion__text">{occasion.text}</p>
+            <p class="occasion__action" aria-hidden="true">
+              {occasion.action}
+              <svg viewBox="0 0 16 10" class="occasion__arrow" fill="none">
+                <path
+                  d="M0 5 H14 M10 1 L14 5 L10 9"
+                  stroke="currentColor"
+                  stroke-width="1.2"
+                  stroke-linecap="square"
+                />
+              </svg>
+            </p>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</section>
+
+<style>
+  .occasions__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--space-s) var(--space-l);
+    margin-block-end: var(--space-l);
+  }
+
+  .occasions__title {
+    margin-block-start: var(--space-2xs);
+    font-size: var(--step-4);
+    text-transform: uppercase;
+  }
+
+  .occasions__note {
+    font-size: var(--step--1);
+    color: var(--c-fg-muted);
+  }
+
+  .occasions__list {
+    display: grid;
+    gap: var(--space-s);
+    grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr));
+    margin: 0;
+  }
+
+  .occasion {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+    padding: var(--space-m);
+    background: var(--c-surface);
+    border: 1px solid var(--c-line);
+    border-radius: var(--radius-l);
+    transition:
+      border-color var(--dur-base) var(--ease-out),
+      background-color var(--dur-base) var(--ease-out);
+  }
+
+  .occasion:hover {
+    border-color: var(--c-brass-dim);
+    background: var(--c-surface-2);
+  }
+
+  .occasion__title {
+    font-size: var(--step-1);
+    text-transform: uppercase;
+  }
+
+  .occasion__link {
+    color: var(--c-paper);
+    text-decoration: none;
+  }
+  .occasion__link:hover {
+    color: var(--c-brass-bright);
+  }
+
+  /* Кликается вся плашка, но ссылка в дереве доступности одна
+     и называется поводом, а не абзацем текста. */
+  .occasion__link::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+
+  .occasion__text {
+    flex: 1;
+    font-size: var(--step--1);
+    line-height: 1.5;
+    color: var(--c-paper-dim);
+  }
+
+  .occasion__action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5em;
+    margin-block-start: var(--space-2xs);
+    font-family: var(--font-display);
+    font-size: var(--step--2);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--c-brass);
+  }
+
+  .occasion__arrow {
+    inline-size: 1.1em;
+    transition: transform var(--dur-base) var(--ease-out);
+  }
+
+  .occasion:hover .occasion__arrow {
+    transform: translateX(4px);
+  }
+</style>

@@ -108,6 +108,15 @@ const mediaRatio = `${d.poster.width} / ${d.poster.height}`;
 
       {d.summary && <p class="card__summary">{d.summary}</p>}
 
+      {/* Главный барьер перед незнакомым местом — «во сколько мне это
+          встанет». Молчание тут хуже честного «уточним при брони». */}
+      <p class="card__entry">
+        <span class="card__entry-label">Вход</span>
+        <span class="card__entry-value">
+          {d.free ? 'свободный' : (d.price ?? 'уточним при брони')}
+        </span>
+      </p>
+
       <p class="card__cta" aria-hidden="true">
         Подробнее
         <svg viewBox="0 0 16 10" class="card__arrow" fill="none">
@@ -328,6 +337,24 @@ const mediaRatio = `${d.poster.width} / ${d.poster.height}`;
     line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
+  }
+
+  .card__entry {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5em;
+    margin-block-start: 0.2rem;
+    font-size: var(--step--2);
+  }
+
+  .card__entry-label {
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--c-fg-muted);
+  }
+
+  .card__entry-value {
+    color: var(--c-paper-dim);
   }
 
   .card__cta {

@@ -1,0 +1,144 @@
+---
+import { site } from '@/data/site';
+import { withBase } from '@/lib/url';
+import Button from '@/components/Button.astro';
+
+/**
+ * Постоянные предложения.
+ *
+ * Единственные два конкретных повода прийти в самое пустое время —
+ * будни до восьми вечера и выходные днём. Оба были напечатаны внутри
+ * сканов меню, потом переехали в подзаголовок одной страницы,
+ * то есть работать так и не начали.
+ *
+ * Здесь они стоят на главной с ценой и временем: это не «атмосфера»,
+ * а понятное предложение, по которому можно принять решение.
+ */
+const [sparkling, brunch] = site.offers;
+---
+
+<section class="offers">
+  <div class="container offers__inner">
+    <h2 class="visually-hidden">Постоянные предложения</h2>
+
+    <div class="offer offer--price" data-reveal>
+      <p class="offer__title">{sparkling.title}</p>
+      <p class="offer__price">
+        {sparkling.price?.toLocaleString('ru-RU')}<span class="offer__unit">{sparkling.priceNote}</span>
+      </p>
+      <p class="offer__when">{sparkling.when}</p>
+    </div>
+
+    <div class="offer" data-reveal style="--reveal-delay:80ms">
+      <p class="offer__title">{brunch.title}</p>
+      <p class="offer__when offer__when--strong">{brunch.when}</p>
+      <p class="offer__note">{brunch.note}</p>
+      {
+        'href' in brunch && brunch.href && (
+          <a class="offer__link" href={withBase(brunch.href)}>
+            Что в бранче
+          </a>
+        )
+      }
+    </div>
+
+    <div class="offer offer--cta" data-reveal style="--reveal-delay:160ms">
+      <p class="offer__title">Забронировать стол</p>
+      <p class="offer__note">
+        Бронь принимаем {site.reservations.hours}. На вечера с программой
+        стол лучше занять заранее.
+      </p>
+      <Button href={withBase('/kontakty#bron')} variant="primary" size="md">
+        Оставить заявку
+      </Button>
+    </div>
+  </div>
+</section>
+
+<style>
+  .offers {
+    padding-block: var(--space-xl);
+    background: var(--c-ink);
+    border-block-end: 1px solid var(--c-line);
+  }
+
+  .offers__inner {
+    display: grid;
+    gap: var(--space-s);
+    grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
+  }
+
+  .offer {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+    padding: var(--space-m);
+    background: var(--c-surface);
+    border: 1px solid var(--c-line);
+    border-radius: var(--radius-l);
+  }
+
+  .offer--price {
+    background: linear-gradient(140deg, var(--c-green-deep), var(--c-surface) 78%);
+  }
+
+  .offer--cta {
+    background: var(--c-surface-2);
+    border-color: var(--c-brass-wash);
+  }
+
+  .offer__title {
+    font-family: var(--font-display);
+    font-size: var(--step-1);
+    font-weight: 300;
+    text-transform: uppercase;
+    color: var(--c-paper);
+  }
+
+  .offer__price {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4em;
+    font-family: var(--font-display);
+    font-size: var(--step-4);
+    font-weight: 200;
+    font-variant-numeric: tabular-nums;
+    color: var(--c-brass);
+    line-height: 1.05;
+  }
+
+  .offer__unit {
+    font-size: var(--step--1);
+    color: var(--c-fg-muted);
+  }
+
+  .offer__when {
+    font-size: var(--step--1);
+    color: var(--c-brass);
+  }
+
+  .offer__when--strong {
+    font-size: var(--step-0);
+  }
+
+  .offer__note {
+    flex: 1;
+    font-size: var(--step--1);
+    color: var(--c-paper-dim);
+  }
+
+  .offer__link {
+    align-self: flex-start;
+    margin-block-start: var(--space-2xs);
+    font-family: var(--font-display);
+    font-size: var(--step--2);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--c-brass);
+  }
+
+  .offer--cta :global(.btn) {
+    align-self: flex-start;
+    margin-block-start: var(--space-2xs);
+  }
+</style>

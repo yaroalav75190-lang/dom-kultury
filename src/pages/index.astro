@@ -5,9 +5,13 @@ import BaseLayout from '@/layouts/BaseLayout.astro';
 import Button from '@/components/Button.astro';
 import EventCard from '@/components/EventCard.astro';
 import Marquee from '@/components/Marquee.astro';
+import SignatureDrinks from '@/components/SignatureDrinks.astro';
+import Occasions from '@/components/Occasions.astro';
+import Proof from '@/components/Proof.astro';
+import Offers from '@/components/Offers.astro';
 import OpenStatus from '@/components/OpenStatus.astro';
 import { site } from '@/data/site';
-import { eventIsUpcoming, plural } from '@/lib/datetime';
+import { eventIsUpcoming, plural, formatDay } from '@/lib/datetime';
 
 import interiorHall from '@/assets/brand/interior-hall.png';
 import interiorTable from '@/assets/brand/interior-table.jpg';
@@ -86,11 +90,24 @@ const spaces = [
         театр, музыкальное лото, гастроужины и большая коктейльная карта.
       </p>
 
+      {
+        nextUp[0] && (
+          <p class="hero__next">
+            <span class="hero__next-label">Ближайшее</span>
+            <a class="hero__next-link" href={withBase(`/afisha/${nextUp[0].id}`)}>
+              {nextUp[0].data.startsAt
+                ? `${formatDay(nextUp[0].data.startsAt)} · ${nextUp[0].data.title}`
+                : nextUp[0].data.title}
+            </a>
+          </p>
+        )
+      }
+
       <div class="hero__actions">
-        <Button href={withBase("/afisha")} variant="primary" size="lg">Смотреть афишу</Button>
-        <Button href={site.reservations.telegram} variant="ghost" size="lg" external>
+        <Button href={withBase('/kontakty#bron')} variant="primary" size="lg">
           Забронировать стол
         </Button>
+        <Button href={withBase('/afisha')} variant="ghost" size="lg">Смотреть афишу</Button>
       </div>
 
       <dl class="hero__facts">
@@ -117,6 +134,8 @@ const spaces = [
       <span aria-hidden="true"></span>
     </a>
   </section>
+
+  <Proof />
 
   <Marquee items={ticker} />
 
@@ -164,6 +183,8 @@ const spaces = [
       }
     </div>
   </section>
+
+  <Offers />
 
   {/* ---------- Что за место ---------- */}
   <section class="section about">
@@ -230,15 +251,20 @@ const spaces = [
     </div>
   </section>
 
+  <Occasions />
+
+  <SignatureDrinks />
+
   {/* ---------- Меню ---------- */}
   <section class="section menu-teaser">
     <div class="container menu-teaser__inner">
       <div data-reveal>
         <p class="eyebrow">Бар и кухня</p>
-        <h2 class="menu-teaser__title">Бар и кухня на равных</h2>
+        <h2 class="menu-teaser__title">На кухне</h2>
         <p class="menu-teaser__text">
-          Авторские коктейли и большая классика, вино, настойки, кухня
-          и бранчи по выходным. Составы, граммовки и цены — всё на месте.
+          Закуски к столу, горячее, паста и десерты. По выходным
+          до восьми вечера — бранчи, которые собираешь сам: выбираешь
+          основу и начинку или яйца и топпинги.
         </p>
         <div class="menu-teaser__actions">
           <Button href={withBase("/menu")} variant="primary" size="lg">Открыть меню</Button>
@@ -360,6 +386,35 @@ const spaces = [
     margin-block-start: var(--space-m);
     font-size: var(--step-1);
     color: var(--c-paper-dim);
+  }
+
+  /* Строка с ближайшим событием стоит между обещанием и кнопками:
+     она превращает «красиво написано» в «сегодня есть повод прийти». */
+  .hero__next {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.6em;
+    margin-block-start: var(--space-m);
+    padding: 0.5rem 0.9rem;
+    border: 1px solid var(--c-brass-wash);
+    border-radius: var(--radius-pill);
+    background: color-mix(in oklab, var(--c-void) 45%, transparent);
+    backdrop-filter: blur(6px);
+    font-size: var(--step--1);
+  }
+
+  .hero__next-label {
+    font-family: var(--font-display);
+    font-size: var(--step--2);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--c-brass);
+  }
+
+  .hero__next-link {
+    color: var(--c-paper);
+    text-decoration-color: color-mix(in oklab, var(--c-paper) 40%, transparent);
   }
 
   .hero__actions {
