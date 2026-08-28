@@ -11,8 +11,6 @@ const sections = (await getCollection('menu'))
   .filter((s) => s.data.card === 'banquet')
   .sort((a, b) => a.data.order - b.data.order);
 
-const itemCount = sections.reduce((n, s) => n + s.data.items.length, 0);
-
 const formats = [
   {
     title: 'День рождения',
@@ -64,7 +62,7 @@ const menuSchema = {
 
 <BaseLayout
   title="Банкеты и мероприятия"
-  description={`Банкетное и фуршетное меню «${site.name}» — ${itemCount} позиций с составами и ценами. Дни рождения, корпоративы, закрытые ужины и съёмки на Бажова, 193 в Екатеринбурге.`}
+  description={`Банкетное и фуршетное меню «${site.name}» с составами и ценами. Дни рождения, корпоративы, закрытые ужины и съёмки на Бажова, 193 в Екатеринбурге.`}
   schema={[menuSchema, breadcrumbs]}
 >
   <section class="section">
@@ -146,8 +144,8 @@ const menuSchema = {
     <div class="container">
       <h2 class="menu-title" data-reveal>Банкетное меню</h2>
       <p class="menu-lede" data-reveal>
-        {itemCount} позиций фуршетного меню с составами, граммовками и ценами.
-        Сет собирается под ваш вечер — это не фиксированный список.
+        Фуршетное меню целиком — с составами, граммовками и ценами.
+        Сет собираем под ваш вечер, это не фиксированный список.
       </p>
       {sections.map((section) => <MenuSection section={section} level={3} />)}
     </div>

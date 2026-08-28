@@ -293,6 +293,9 @@ const path = stripBase(Astro.url.pathname);
     align-items: center;
     gap: var(--space-m);
     min-block-size: 72px;
+    /* Ничто в шапке не должно вылезать за пределы контейнера:
+       раньше кнопка брони уезжала под правый край окна. */
+    flex-wrap: nowrap;
   }
 
   .header__brand {
@@ -304,21 +307,29 @@ const path = stripBase(Astro.url.pathname);
     color: inherit;
   }
 
+  /* Навигация — единственный блок, которому можно сжиматься:
+     логотип и кнопка брони должны остаться целыми. */
   .header__nav {
     margin-inline: auto;
+    min-inline-size: 0;
+    flex: 0 1 auto;
   }
 
   .header__list {
     display: flex;
     align-items: center;
-    gap: clamp(var(--space-s), 1.6vw, var(--space-l));
+    gap: clamp(var(--space-2xs), 1.4vw, var(--space-l));
     margin: 0;
+    flex-wrap: nowrap;
   }
 
   .header__link {
     position: relative;
     display: inline-block;
     padding-block: 0.55rem;
+    /* «О ДОМЕ» ломалось на две строки и прыгало относительно
+       остальных пунктов. Названия разделов не переносятся. */
+    white-space: nowrap;
     font-family: var(--font-display);
     font-size: var(--step--1);
     font-weight: 300;
@@ -399,8 +410,16 @@ const path = stripBase(Astro.url.pathname);
   }
 
   /* --- Мобильная раскладка --- */
-  @media (max-width: 74rem) {
-    .header__status,
+  /* Порядок отступления при сужении: сначала уходит индикатор «открыто»
+     (он есть на первом экране и в подвале), затем телефон (он в подвале
+     и на странице контактов). Кнопка брони остаётся до последнего. */
+  @media (max-width: 86rem) {
+    .header__status {
+      display: none;
+    }
+  }
+
+  @media (max-width: 76rem) {
     .header__phone {
       display: none;
     }

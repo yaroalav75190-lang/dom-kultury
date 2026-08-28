@@ -23,10 +23,25 @@ const href = withBase(`/afisha/${event.id}`);
  * тяжелее самого крупного варианта из srcset.
  */
 const width = featured ? 1040 : 720;
-const height = featured ? 693 : 900;
+
+/**
+ * Высота и рамка считаются из самого постера.
+ *
+ * Афиши — это картинки с напечатанным текстом: название, дата, состав.
+ * Рамка фиксированных пропорций обрезала им края вместе с текстом
+ * (квадратный постер в рамке 4:5 терял пятую часть ширины). Поэтому
+ * карточка подстраивается под постер, а не наоборот.
+ */
+const ratio = d.poster.width / d.poster.height;
+const height = Math.round(width / ratio);
+const mediaRatio = `${d.poster.width} / ${d.poster.height}`;
 ---
 
-<article class:list={['card', featured && 'card--featured']} data-reveal>
+<article
+  class:list={['card', featured && 'card--featured']}
+  style={`--media-ratio: ${mediaRatio}`}
+  data-reveal
+>
     <div class="card__media">
       <Image
         src={d.poster}
@@ -190,13 +205,10 @@ const height = featured ? 693 : 900;
   .card__media {
     position: relative;
     grid-row: 1;
-    aspect-ratio: 4 / 5;
+    /* Пропорции берутся у самого постера — см. mediaRatio выше. */
+    aspect-ratio: var(--media-ratio, 1 / 1);
     overflow: hidden;
     background: var(--c-surface-2);
-  }
-
-  .card--featured .card__media {
-    aspect-ratio: 3 / 2;
   }
 
   .card__img {

@@ -4,7 +4,6 @@ import BaseLayout from '@/layouts/BaseLayout.astro';
 import MenuSection from '@/components/MenuSection.astro';
 import Button from '@/components/Button.astro';
 import { site } from '@/data/site';
-import { plural } from '@/lib/datetime';
 import { withBase } from '@/lib/url';
 
 const cards = [
@@ -39,11 +38,6 @@ for (const s of all) {
   groupsByCard.set(s.data.card, list);
 }
 
-const itemCount = all.reduce((n, s) => n + s.data.items.length, 0);
-
-const prices = all.flatMap((s) => s.data.items.map((i) => i.price).filter((p): p is number => !!p));
-const minPrice = Math.min(...prices);
-const maxPrice = Math.max(...prices);
 
 /**
  * Schema.org Menu. Раньше меню было набором картинок и для поисковика
@@ -85,7 +79,7 @@ const breadcrumbs = {
 
 <BaseLayout
   title="Меню бара и кухни"
-  description={`Полное меню «${site.name}»: авторские и классические коктейли, настойки, вино, кухня и бранчи. ${itemCount} позиций с составами и ценами от ${minPrice} ₽. Екатеринбург, Бажова, 193.`}
+  description={`Коктейльная карта, вино, настойки и кухня «${site.name}» — с составами, граммовками и ценами. Бранчи по выходным. Екатеринбург, Бажова, 193.`}
   schema={[menuSchema, breadcrumbs]}
 >
   <section class="section head">
@@ -93,9 +87,9 @@ const breadcrumbs = {
       <p class="eyebrow" data-reveal>Бар и кухня</p>
       <h1 class="head__title" data-reveal>Меню</h1>
       <p class="head__lede" data-reveal>
-        {itemCount} {plural(itemCount, ['позиция', 'позиции', 'позиций'])} с составами,
-        граммовками и ценами — от {minPrice} до {maxPrice.toLocaleString('ru-RU')} ₽.
-        Меню сезонное, отдельные позиции могут закончиться.
+        Авторские коктейли и большая классика, вино, настойки и кухня —
+        от закусок к столу до горячего. По выходным до восьми вечера
+        работают бранчи. Карта сезонная: отдельные позиции могут закончиться.
       </p>
 
       <ul class="offers" role="list">
