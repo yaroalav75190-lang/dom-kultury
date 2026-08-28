@@ -1,0 +1,57 @@
+---
+/**
+ * Логотип «Дом культуры».
+ *
+ * Используется ОРИГИНАЛЬНОЕ начертание заведения
+ * (`src/assets/brand/logotype.png`), снятое с их же материалов.
+ * Перерисовывать или воспроизводить логотип шрифтом нельзя —
+ * поэтому здесь ровно тот файл, что и в фирменных носителях.
+ *
+ * Цвет меняется единственным способом, который не трогает форму букв:
+ * рисунок подставляется как CSS-маска, а заливка берётся из
+ * currentColor. Так один и тот же файл работает латунным в шапке
+ * и любым другим там, где это понадобится.
+ */
+import logotype from '@/assets/brand/logotype.png?url';
+
+interface Props {
+  class?: string;
+  /**
+   * true, если рядом уже есть текстовое название и логотип
+   * дублировал бы его для читателя экрана.
+   */
+  decorative?: boolean;
+}
+
+const { class: className, decorative = false } = Astro.props;
+const label = 'Дом культуры';
+---
+
+<span
+  class:list={['logo', className]}
+  style={`--logo: url("${logotype}")`}
+  role={decorative ? 'presentation' : 'img'}
+  aria-label={decorative ? undefined : label}
+></span>
+
+<style>
+  .logo {
+    display: block;
+    /* Пропорции оригинала: 1840 × 629. */
+    aspect-ratio: 1840 / 629;
+    inline-size: auto;
+    block-size: 2.6em;
+
+    background-color: currentColor;
+    color: var(--c-brass);
+
+    -webkit-mask-image: var(--logo);
+    mask-image: var(--logo);
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+  }
+</style>

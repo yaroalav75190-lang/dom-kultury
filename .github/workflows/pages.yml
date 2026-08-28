@@ -1,0 +1,73 @@
+# Витрина для заказчика на GitHub Pages.
+#
+# Собирает сайт в подпапку с именем репозитория и выкладывает его.
+# Это ПРЕДПРОСМОТР, а не боевой сайт: сборка помечена noindex,
+# чтобы копия не конкурировала с d-k.bar в поиске.
+#
+# Боевая сборка (`npm run build` без переменных) остаётся настроенной
+# на корень домена d-k.bar и этим процессом не затрагивается.
+
+name: Витрина на GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Одновременно выкладываем только одну версию, но начатую не обрываем.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Контраст палитры не зависит от сборки — проверяем сразу.
+      - name: Проверка контраста палитры
+        run: npm run contrast
+
+      - uses: actions/configure-pages@v5
+        id: pages
+
+      - name: Сборка
+        env:
+          # origin — это https://<владелец>.github.io, а подпапка
+          # совпадает с именем репозитория.
+          PAGES_SITE: ${{ steps.pages.outputs.origin }}
+          PAGES_BASE: ${{ github.event.repository.name }}
+          PUBLIC_PREVIEW: 'true'
+        run: npm run build
+
+      - name: Проверка собранного сайта
+        env:
+          PAGES_BASE: ${{ github.event.repository.name }}
+        run: npm run verify
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

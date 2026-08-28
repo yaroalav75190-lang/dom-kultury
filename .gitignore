@@ -1,0 +1,14 @@
+node_modules/
+
+# Локальные настройки инструментов — у каждого свои.
+.claude/settings.local.json
+dist/
+.astro/
+.env
+.env.production
+.DS_Store
+*.log
+
+# Просмотрщик вёрстки собирается из dist — в репозитории нужен только шаблон.
+preview/index.html
+preview/pages.json

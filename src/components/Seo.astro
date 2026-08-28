@@ -1,0 +1,142 @@
+---
+import { site, schemaOpeningHours } from '@/data/site';
+
+interface Props {
+  title: string;
+  description: string;
+  /** Путь страницы без домена: '/afisha'. */
+  path: string;
+  /** Абсолютный или относительный адрес картинки для соцсетей. */
+  image?: string;
+  imageAlt?: string;
+  type?: 'website' | 'article';
+  /** Убрать страницу из индекса (служебные страницы, 404). */
+  noindex?: boolean;
+  /** Дополнительные объекты Schema.org: Event, BreadcrumbList, Menu. */
+  schema?: Record<string, unknown>[];
+  /** Реальные размеры превью: соцсети верят этим числам без загрузки картинки. */
+  imageWidth?: number;
+  imageHeight?: number;
+}
+
+const {
+  title,
+  description,
+  path,
+  image = '/og.jpg',
+  imageAlt = `${site.name} — ${site.tagline}`,
+  imageWidth = 1200,
+  imageHeight = 630,
+  type = 'website',
+  noindex = false,
+  schema = [],
+} = Astro.props;
+
+/**
+ * Витрина для заказчика собирается на отдельный адрес и не должна
+ * попадать в поиск: две копии одного текста конкурировали бы друг
+ * с другом, а выигрывать должен настоящий d-k.bar.
+ */
+const isPreviewBuild = import.meta.env.PUBLIC_PREVIEW === 'true';
+
+const base = Astro.site ?? new URL(site.url);
+
+/**
+ * Canonical в той же форме, что и адреса в sitemap: со слэшем на конце.
+ * Разные формы одного адреса поисковик считает разными страницами,
+ * и сайт начинает конкурировать сам с собой.
+ */
+const hasExtension = /\.[a-z0-9]+$/i.test(path);
+const normalizedPath = hasExtension || path.endsWith('/') ? path : `${path}/`;
+const canonical = new URL(normalizedPath, base).href;
+
+const ogImage = new URL(image, base).href;
+
+/**
+ * Картинка заведения — одна и та же на всех страницах.
+ * У объекта с постоянным @id не может быть девяти разных изображений:
+ * поисковик получал бы девять противоречивых описаний одного бара.
+ */
+const businessImage = new URL('/og.jpg', base).href;
+
+const fullTitle = path === '/' ? title : `${title} — ${site.name}`;
+
+/**
+ * Основной объект заведения. Он один на весь сайт и повторяется на
+ * каждой странице: так поисковики и карты получают согласованные
+ * адрес, телефон и часы работы (NAP) откуда бы ни зашёл пользователь.
+ */
+const businessSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BarOrPub',
+  '@id': `${base.origin}/#business`,
+  name: site.name,
+  alternateName: site.shortName,
+  description: site.description,
+  slogan: site.tagline,
+  url: base.origin,
+  telephone: site.contacts.phone.raw,
+  image: businessImage,
+  priceRange: '₽₽',
+  currenciesAccepted: 'RUB',
+  servesCuisine: ['Авторская', 'Европейская'],
+  acceptsReservations: 'True',
+  hasMenu: `${base.origin}/menu/`,
+  address: {
+    '@type': 'PostalAddress',
+    streetAddress: site.contacts.address.street,
+    addressLocality: site.contacts.address.city,
+    addressRegion: site.contacts.address.region,
+    postalCode: site.contacts.address.postalCode,
+    addressCountry: site.contacts.address.country,
+  },
+  geo: {
+    '@type': 'GeoCoordinates',
+    latitude: site.contacts.geo.latitude,
+    longitude: site.contacts.geo.longitude,
+  },
+  openingHours: schemaOpeningHours(),
+  sameAs: [...site.socials.map((s) => s.href), site.contacts.maps],
+};
+
+const graph = [businessSchema, ...schema];
+---
+
+<title>{fullTitle}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonical} />
+
+{(noindex || isPreviewBuild) && <meta name="robots" content="noindex, nofollow" />}
+{!noindex && !isPreviewBuild && (
+  <meta name="robots" content="index, follow, max-image-preview:large" />
+)}
+
+<meta property="og:site_name" content={site.name} />
+<meta property="og:type" content={type} />
+<meta property="og:locale" content={site.locale} />
+<meta property="og:url" content={canonical} />
+<meta property="og:title" content={fullTitle} />
+<meta property="og:description" content={description} />
+<meta property="og:image" content={ogImage} />
+<meta property="og:image:alt" content={imageAlt} />
+<meta property="og:image:width" content={String(imageWidth)} />
+<meta property="og:image:height" content={String(imageHeight)} />
+
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={fullTitle} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={ogImage} />
+<meta name="twitter:image:alt" content={imageAlt} />
+
+<meta name="geo.region" content="RU-SVE" />
+<meta name="geo.placename" content={site.contacts.address.city} />
+<meta
+  name="geo.position"
+  content={`${site.contacts.geo.latitude};${site.contacts.geo.longitude}`}
+/>
+
+<script
+  type="application/ld+json"
+  is:inline
+  set:html={JSON.stringify(graph.length === 1 ? graph[0] : graph)}
+/>

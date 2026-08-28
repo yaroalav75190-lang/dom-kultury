@@ -1,0 +1,371 @@
+---
+import Button from '@/components/Button.astro';
+import { site } from '@/data/site';
+import { withBase } from '@/lib/url';
+
+/**
+ * Бронирование стола.
+ *
+ * На прежнем сайте кнопка «Забронировать» просто открывала Telegram —
+ * дальше гость и администратор выясняли дату, время и количество гостей
+ * перепиской. Форма собирает это заранее и складывает в готовое
+ * сообщение: один тап «скопировать и открыть», и в чат уходит заявка,
+ * а не «здравствуйте».
+ *
+ * Сайт статический, поэтому сервер не нужен: сообщение собирается
+ * в браузере. Телефон остаётся равноправным путём для тех,
+ * у кого Telegram нет.
+ */
+---
+
+<form class="booking" data-booking novalidate>
+  <div class="booking__grid">
+    <div class="field">
+      <label class="field__label" for="b-date">Дата</label>
+      <input class="field__input" id="b-date" name="date" type="date" required data-b-date />
+    </div>
+
+    <div class="field">
+      <label class="field__label" for="b-time">Время</label>
+      <input
+        class="field__input"
+        id="b-time"
+        name="time"
+        type="time"
+        step="1800"
+        value="19:00"
+        required
+      />
+    </div>
+
+    <div class="field">
+      <label class="field__label" for="b-guests">Гостей</label>
+      <input
+        class="field__input"
+        id="b-guests"
+        name="guests"
+        type="number"
+        min="1"
+        max="60"
+        value="2"
+        inputmode="numeric"
+        aria-describedby="b-guests-hint"
+        required
+      />
+      <p class="field__hint" id="b-guests-hint">Больше 12 — это уже банкет, напишем отдельно.</p>
+    </div>
+
+    <div class="field">
+      <label class="field__label" for="b-name">Имя</label>
+      <input
+        class="field__input"
+        id="b-name"
+        name="name"
+        type="text"
+        autocomplete="given-name"
+        required
+      />
+    </div>
+
+    <div class="field field--wide">
+      <label class="field__label" for="b-occasion">
+        Повод <span class="field__optional">— необязательно</span>
+      </label>
+      <input
+        class="field__input"
+        id="b-occasion"
+        name="occasion"
+        type="text"
+        placeholder="День рождения, свидание, идём на концерт"
+      />
+    </div>
+  </div>
+
+  <div class="booking__preview">
+    <p class="booking__preview-label" id="b-preview-label">Сообщение, которое уйдёт в Telegram</p>
+    {/* aria-live="off": у <output> роль status и живой регион по умолчанию,
+        то есть текст заявки зачитывался бы целиком после каждой набранной
+        буквы. Читать его нужно по требованию, а не непрерывно. */}
+    <output
+      class="booking__message"
+      data-b-message
+      aria-labelledby="b-preview-label"
+      aria-live="off"></output>
+  </div>
+
+  <div class="booking__actions">
+    <Button type="submit" variant="primary" size="lg">Скопировать и открыть Telegram</Button>
+    <Button href={site.contacts.phone.href} variant="ghost" size="lg">
+      Позвонить {site.contacts.phone.display}
+    </Button>
+  </div>
+
+  <p class="booking__status" data-b-status role="status" aria-live="polite"></p>
+
+  <p class="booking__legal">
+    Бронь — {site.reservations.hours}. Отправляя заявку, вы соглашаетесь с{' '}
+    <a href={withBase("/pravovaya-informatsiya#soglasie")}>обработкой персональных данных</a>.
+    Данные не покидают ваш браузер: сообщение вы отправляете сами, из своего Telegram.
+  </p>
+</form>
+
+<script is:inline define:vars={{ telegram: site.reservations.telegram }}>
+  const form = document.querySelector('[data-booking]');
+  if (form) {
+    const message = form.querySelector('[data-b-message]');
+    const status = form.querySelector('[data-b-status]');
+    const dateInput = form.querySelector('[data-b-date]');
+
+    // Забронировать вчерашний вечер нельзя — закрываем прошлое.
+    // Сегодня считаем по Екатеринбургу, а не по часам посетителя: из
+    // Владивостока «сегодня» наступает раньше, чем в баре.
+    const ekbToday = () => {
+      const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Yekaterinburg',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(new Date());
+      return parts; // en-CA даёт ровно YYYY-MM-DD
+    };
+
+    const minDate = ekbToday();
+    if (dateInput) {
+      dateInput.min = minDate;
+      if (!dateInput.value) dateInput.value = minDate;
+    }
+
+    const humanDate = (value) => {
+      if (!value) return '';
+      const [y, m, d] = value.split('-').map(Number);
+      const months = [
+        'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+        'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря',
+      ];
+      return `${d} ${months[m - 1]} ${y}`;
+    };
+
+    const compose = () => {
+      const f = new FormData(form);
+      const guests = Number(f.get('guests')) || 0;
+      const plural =
+        guests % 10 === 1 && guests % 100 !== 11
+          ? 'гость'
+          : [2, 3, 4].includes(guests % 10) && ![12, 13, 14].includes(guests % 100)
+            ? 'гостя'
+            : 'гостей';
+
+      const lines = [
+        'Здравствуйте! Хочу забронировать стол.',
+        '',
+        `Дата: ${humanDate(String(f.get('date') ?? ''))}`,
+        `Время: ${f.get('time') || '—'}`,
+        `Гостей: ${guests} ${plural}`,
+        `Имя: ${String(f.get('name') ?? '').trim() || '—'}`,
+      ];
+      const occasion = String(f.get('occasion') ?? '').trim();
+      if (occasion) lines.push(`Повод: ${occasion}`);
+
+      return lines.join('\n');
+    };
+
+    const render = () => {
+      if (message) message.textContent = compose();
+    };
+
+    form.addEventListener('input', render);
+    render();
+
+    /**
+     * Проверка полей. На форме стоит novalidate, поэтому браузерные
+     * ограничения min/max/required не срабатывают сами — проверяем их
+     * здесь и связываем ошибку с конкретным полем через aria-invalid,
+     * а не только общей строкой внизу формы.
+     */
+    const problems = () => {
+      const found = [];
+      const field = (id) => form.querySelector('#' + id);
+
+      const date = field('b-date');
+      const time = field('b-time');
+      const guests = field('b-guests');
+      const name = field('b-name');
+
+      if (!date.value) found.push([date, 'Укажите дату.']);
+      else if (minDate && date.value < minDate) found.push([date, 'Эта дата уже прошла.']);
+
+      if (!time.value) found.push([time, 'Укажите время.']);
+      if (!name.value.trim()) found.push([name, 'Как к вам обращаться?']);
+
+      const count = Number(guests.value);
+      if (!guests.value || !Number.isFinite(count)) found.push([guests, 'Укажите количество гостей.']);
+      else if (count < 1) found.push([guests, 'Гостей не может быть меньше одного.']);
+      else if (count > 60) found.push([guests, 'Столько гостей лучше обсудить голосом — позвоните.']);
+
+      return found;
+    };
+
+    const clearErrors = () => {
+      for (const el of form.querySelectorAll('[aria-invalid="true"]')) {
+        el.removeAttribute('aria-invalid');
+      }
+    };
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      clearErrors();
+
+      const found = problems();
+      if (found.length) {
+        for (const [el] of found) el.setAttribute('aria-invalid', 'true');
+        found[0][0].focus();
+        if (status) status.textContent = found.map(([, message]) => message).join(' ');
+        return;
+      }
+
+      const text = compose();
+
+      // Окно открывается синхронно, до любого await: WebKit разрешает
+      // window.open только в том же такте, что и жест пользователя.
+      // После await он посчитал бы вызов всплывающим окном и заблокировал.
+      const chat = window.open(telegram, '_blank', 'noopener');
+
+      navigator.clipboard
+        ?.writeText(text)
+        .then(() => {
+          if (status) {
+            status.textContent = chat
+              ? 'Заявка скопирована. Вставьте её в открывшийся чат.'
+              : 'Заявка скопирована. Откройте Telegram и вставьте её в чат.';
+          }
+        })
+        .catch(() => {
+          // Буфер недоступен (нет https, отказ в правах) — текст заявки
+          // остаётся на виду, его можно выделить и скопировать вручную.
+          if (status) {
+            status.textContent = 'Скопируйте текст заявки выше и вставьте в чат.';
+          }
+        });
+    });
+
+    // Как только поле поправили, метку ошибки снимаем.
+    form.addEventListener('input', (e) => {
+      if (e.target && e.target.removeAttribute) e.target.removeAttribute('aria-invalid');
+    });
+  }
+</script>
+
+<style>
+  .booking {
+    display: grid;
+    gap: var(--space-m);
+    padding: var(--space-l);
+    background: var(--c-surface);
+    border: 1px solid var(--c-line);
+    border-radius: var(--radius-l);
+  }
+
+  .booking__grid {
+    display: grid;
+    gap: var(--space-s);
+    grid-template-columns: repeat(auto-fit, minmax(min(11rem, 100%), 1fr));
+  }
+
+  .field--wide {
+    grid-column: 1 / -1;
+  }
+
+  .field__label {
+    display: block;
+    margin-block-end: 0.4rem;
+    font-size: var(--step--2);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--c-brass);
+  }
+
+  .field__optional {
+    color: var(--c-fg-muted);
+    letter-spacing: 0.04em;
+    text-transform: none;
+  }
+
+  .field__input {
+    inline-size: 100%;
+    min-block-size: 46px;
+    padding-inline: var(--space-s);
+    background: var(--c-ink);
+    color: var(--c-paper);
+    border: 1px solid var(--c-line-strong);
+    border-radius: var(--radius-m);
+    font-size: var(--step-0);
+  }
+
+  .field__input:focus-visible {
+    border-color: var(--c-brass);
+  }
+
+  /* Поле с ошибкой должно быть видно, а не только озвучено. */
+  .field__input[aria-invalid='true'] {
+    border-color: var(--c-red-soft);
+  }
+
+  .field__input::placeholder {
+    color: color-mix(in oklab, var(--c-paper-mute) 80%, transparent);
+  }
+
+  /* Календарь и часы в тёмной теме иначе рисуются чёрным по чёрному. */
+  .field__input::-webkit-calendar-picker-indicator {
+    filter: invert(1) sepia(1) saturate(0.4) hue-rotate(5deg);
+    cursor: pointer;
+  }
+
+  .field__hint {
+    margin-block-start: 0.35rem;
+    font-size: var(--step--2);
+    color: var(--c-fg-muted);
+  }
+
+  .booking__preview {
+    padding: var(--space-s) var(--space-m);
+    background: var(--c-ink);
+    border: 1px dashed var(--c-line-strong);
+    border-radius: var(--radius-m);
+  }
+
+  .booking__preview-label {
+    font-size: var(--step--2);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--c-fg-muted);
+  }
+
+  .booking__message {
+    display: block;
+    margin-block-start: var(--space-2xs);
+    white-space: pre-wrap;
+    font-size: var(--step--1);
+    line-height: 1.55;
+    color: var(--c-paper-dim);
+    /* Текст должен выделяться мышью — на случай, если буфер недоступен. */
+    user-select: text;
+  }
+
+  .booking__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2xs);
+  }
+
+  .booking__status {
+    font-size: var(--step--1);
+    color: var(--c-brass);
+    min-block-size: 1.5em;
+  }
+
+  .booking__legal {
+    font-size: var(--step--2);
+    color: var(--c-fg-muted);
+    max-inline-size: 60ch;
+  }
+</style>

@@ -1,0 +1,501 @@
+<title>Вёрстка Дома культуры</title>
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+/>
+
+<style>
+  /* ==========================================================
+     Оболочка просмотрщика.
+
+     Сознательно нейтральная: внутри рамки — настоящий сайт со
+     своей латунно-зелёной палитрой, и оболочка не должна с ней
+     соперничать. Отсюда серая «стена мастерской», на которой
+     тёмный сайт читается как предмет, и инженерный Plex вместо
+     фирменных гарнитур сайта: подписи должны выглядеть подписями.
+     ========================================================== */
+
+  :root {
+    --wall: #d8dad4;
+    --panel: #eff0ec;
+    --panel-2: #e4e6e0;
+    --ink: #191c1a;
+    --muted: #5c625e;
+    --line: #c3c6bf;
+    --accent: #7c6127;
+    --accent-soft: rgba(124, 97, 39, 0.12);
+    --shadow: 0 24px 48px -28px rgba(20, 26, 22, 0.55);
+
+    --font-ui: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Consolas, monospace;
+
+    --radius: 10px;
+    --gap: clamp(1rem, 0.7rem + 1.4vw, 2rem);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --wall: #1b1f1d;
+      --panel: #252a27;
+      --panel-2: #2e3430;
+      --ink: #e9eae6;
+      --muted: #9aa29d;
+      --line: #363d38;
+      --accent: #c8a96a;
+      --accent-soft: rgba(200, 169, 106, 0.16);
+      --shadow: 0 24px 48px -28px rgba(0, 0, 0, 0.8);
+    }
+  }
+
+  :root[data-theme='dark'] {
+    --wall: #1b1f1d;
+    --panel: #252a27;
+    --panel-2: #2e3430;
+    --ink: #e9eae6;
+    --muted: #9aa29d;
+    --line: #363d38;
+    --accent: #c8a96a;
+    --accent-soft: rgba(200, 169, 106, 0.16);
+    --shadow: 0 24px 48px -28px rgba(0, 0, 0, 0.8);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    background: var(--wall);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .shell {
+    max-width: 1500px;
+    margin-inline: auto;
+    padding: var(--gap);
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap);
+  }
+
+  /* ---------- Шапка ---------- */
+  .head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem 2rem;
+  }
+
+  .head__title {
+    margin: 0;
+    font-size: clamp(1.35rem, 1.1rem + 1vw, 1.9rem);
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+
+  .head__sub {
+    margin: 0.35rem 0 0;
+    max-width: 56ch;
+    color: var(--muted);
+  }
+
+  .stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 1.75rem;
+    margin: 0;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .stat dt {
+    order: 2;
+    font-size: 0.72rem;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .stat dd {
+    order: 1;
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 1.2rem;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    color: var(--accent);
+  }
+
+  /* ---------- Раскладка ---------- */
+  .layout {
+    display: grid;
+    gap: var(--gap);
+    align-items: start;
+  }
+
+  @media (min-width: 62rem) {
+    .layout {
+      grid-template-columns: 17rem minmax(0, 1fr);
+    }
+  }
+
+  /* ---------- Список страниц ---------- */
+  .rail {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  @media (max-width: 61.99rem) {
+    .rail {
+      flex-direction: row;
+      overflow-x: auto;
+      scrollbar-width: thin;
+    }
+  }
+
+  .rail__item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1rem;
+    padding: 0.55rem 0.7rem;
+    background: none;
+    border: 0;
+    border-radius: 7px;
+    color: inherit;
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+    white-space: nowrap;
+    transition:
+      background-color 140ms ease,
+      color 140ms ease;
+  }
+
+  .rail__item:hover {
+    background: var(--panel-2);
+  }
+
+  .rail__item[aria-pressed='true'] {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  .rail__name {
+    font-weight: 500;
+  }
+
+  .rail__route {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+
+  .rail__item[aria-pressed='true'] .rail__route {
+    color: inherit;
+    opacity: 0.75;
+  }
+
+  /* ---------- Область просмотра ---------- */
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    min-width: 0;
+  }
+
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .widths {
+    display: flex;
+    gap: 2px;
+    padding: 3px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+  }
+
+  .widths button {
+    padding: 0.35rem 0.85rem;
+    background: none;
+    border: 0;
+    border-radius: 999px;
+    color: var(--muted);
+    font: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition:
+      background-color 140ms ease,
+      color 140ms ease;
+  }
+
+  .widths button:hover {
+    color: var(--ink);
+  }
+
+  .widths button[aria-pressed='true'] {
+    background: var(--accent);
+    color: var(--wall);
+  }
+
+  .meta {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .meta b {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  /* Рамка. Страница рендерится в настоящую ширину устройства
+     и масштабируется вниз, иначе ноутбучная раскладка просто
+     не поместилась бы в колонку. */
+  .viewport {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: clamp(0.5rem, 1.5vw, 1rem);
+    overflow: hidden;
+  }
+
+  .viewport__inner {
+    position: relative;
+    margin-inline: auto;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    background: #0b0f0d;
+    transition: width 220ms ease, height 220ms ease;
+  }
+
+  .viewport__inner iframe {
+    display: block;
+    border: 0;
+    transform-origin: top left;
+    background: #0b0f0d;
+  }
+
+  .note {
+    margin: 0;
+    max-width: 78ch;
+    color: var(--muted);
+  }
+
+  .note b {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  .hint {
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--muted);
+  }
+
+  .hint code {
+    font-family: var(--font-mono);
+    font-size: 0.95em;
+    padding: 0.1em 0.35em;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      transition-duration: 0.01ms !important;
+    }
+  }
+</style>
+
+<div class="shell">
+  <header class="head">
+    <div>
+      <h1 class="head__title">Дом культуры — пересобранный сайт</h1>
+      <p class="head__sub">
+        Не скриншоты: внутри рамки — настоящая свёрстанная страница.
+        Её можно листать, менять ширину экрана и щёлкать по интерфейсу.
+      </p>
+    </div>
+
+    <dl class="stats">
+      <div class="stat"><dd>16</dd><dt>страниц</dt></div>
+      <div class="stat"><dd>314</dd><dt>позиций меню</dt></div>
+      <div class="stat"><dd>76 КБ</dd><dt>меню на загрузке</dt></div>
+      <div class="stat"><dd>4,7 МБ</dd><dt>было сканами</dt></div>
+    </dl>
+  </header>
+
+  <div class="layout">
+    <nav class="rail" id="rail" aria-label="Страницы сайта"></nav>
+
+    <div class="stage">
+      <div class="toolbar">
+        <div class="widths" role="group" aria-label="Ширина экрана">
+          <button type="button" data-w="390" data-h="780">Телефон</button>
+          <button type="button" data-w="820" data-h="900">Планшет</button>
+          <button type="button" data-w="1440" data-h="940" aria-pressed="true">Ноутбук</button>
+        </div>
+        <p class="meta">
+          <span id="meta-route"></span>
+          <span>вес страницы <b id="meta-weight"></b></span>
+        </p>
+      </div>
+
+      <div class="viewport">
+        <div class="viewport__inner" id="frame-box">
+          <iframe id="frame" title="Просмотр страницы сайта"></iframe>
+        </div>
+      </div>
+
+      <p class="note" id="note"></p>
+      <p class="hint" id="js-state" hidden></p>
+      <p class="hint">
+        Исходники лежат в папке проекта. Локальный запуск —
+        <code>npm run dev</code>, сборка — <code>npm run build</code>,
+        проверки — <code>npm test</code>.
+      </p>
+    </div>
+  </div>
+</div>
+
+<script id="pages-data" type="application/json"><!--PAGES--></script>
+
+<script>
+  const PAGES = JSON.parse(document.getElementById('pages-data').textContent);
+
+  const rail = document.getElementById('rail');
+  const frame = document.getElementById('frame');
+  const box = document.getElementById('frame-box');
+  const note = document.getElementById('note');
+  const metaRoute = document.getElementById('meta-route');
+  const metaWeight = document.getElementById('meta-weight');
+  const widthButtons = [...document.querySelectorAll('.widths button')];
+
+  let current = 0;
+  let width = 1440;
+  let height = 940;
+
+  // --- Список страниц ---
+  PAGES.forEach((page, i) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'rail__item';
+    button.setAttribute('aria-pressed', String(i === 0));
+    button.innerHTML =
+      '<span class="rail__name"></span><span class="rail__route"></span>';
+    button.querySelector('.rail__name').textContent = page.title;
+    button.querySelector('.rail__route').textContent = page.route;
+    button.addEventListener('click', () => show(i));
+    rail.append(button);
+  });
+
+  // --- Переключатели ширины ---
+  for (const button of widthButtons) {
+    button.addEventListener('click', () => {
+      width = Number(button.dataset.w);
+      height = Number(button.dataset.h);
+      for (const other of widthButtons) {
+        other.setAttribute('aria-pressed', String(other === button));
+      }
+      fit();
+    });
+  }
+
+  /**
+   * Подгонка рамки под колонку.
+   *
+   * Страница всегда рендерится в настоящую ширину устройства, а вниз
+   * её масштабирует transform: так раскладка соответствует выбранному
+   * экрану, а не ширине окна просмотрщика.
+   */
+  function fit() {
+    const available = box.parentElement.clientWidth - 2;
+    const scale = Math.min(1, available / width);
+
+    frame.style.width = width + 'px';
+    frame.style.height = height + 'px';
+    frame.style.transform = 'scale(' + scale + ')';
+
+    box.style.width = Math.round(width * scale) + 'px';
+    box.style.height = Math.round(height * scale) + 'px';
+  }
+
+  function show(index) {
+    current = index;
+    const page = PAGES[index];
+
+    [...rail.children].forEach((button, i) => {
+      button.setAttribute('aria-pressed', String(i === index));
+    });
+
+    frame.srcdoc = page.html;
+    frame.title = 'Просмотр страницы «' + page.title + '»';
+
+    note.innerHTML = '';
+    const strong = document.createElement('b');
+    strong.textContent = page.title + '. ';
+    note.append(strong, document.createTextNode(page.note));
+
+    metaRoute.textContent = page.route;
+    metaWeight.textContent = page.gzip + ' КБ';
+    fit();
+  }
+
+  /**
+   * Работают ли скрипты внутри рамки.
+   *
+   * Сайт первым делом ставит на <html> класс js — по нему и проверяем.
+   * Если вложенный документ ограничен политикой безопасности, вёрстка
+   * всё равно видна, а вот поиск и фильтры — нет. Честнее сказать
+   * об этом прямо, чем обещать интерактивность, которой нет.
+   */
+  frame.addEventListener('load', () => {
+    const state = document.getElementById('js-state');
+    let alive = false;
+    try {
+      alive = !!frame.contentDocument?.documentElement.classList.contains('js');
+    } catch {
+      alive = false;
+    }
+    state.hidden = alive;
+    if (!alive) {
+      state.textContent =
+        'В этом просмотре скрипты страницы не выполняются, поэтому поиск по меню и фильтр афиши статичны. Вёрстка показана целиком — на живом сайте они работают.';
+    }
+  });
+
+  addEventListener('resize', fit);
+  show(0);
+</script>

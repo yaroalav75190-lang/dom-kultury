@@ -1,0 +1,144 @@
+---
+import Seo from '@/components/Seo.astro';
+import SiteHeader from '@/components/SiteHeader.astro';
+import SiteFooter from '@/components/SiteFooter.astro';
+import { site } from '@/data/site';
+import { withBase } from '@/lib/url';
+// ?url отдаёт итоговый адрес файла после сборки — с базовым путём
+// и хешем содержимого. Тот же файл подключают @font-face в fonts.css,
+// поэтому предзагрузка и реальная загрузка указывают в одно место.
+import unboundedCyrillic from '@/assets/fonts/unbounded-cyrillic.woff2?url';
+import manropeCyrillic from '@/assets/fonts/manrope-cyrillic.woff2?url';
+import '@/styles/global.css';
+
+interface Props {
+  title: string;
+  description: string;
+  image?: string;
+  imageAlt?: string;
+  imageWidth?: number;
+  imageHeight?: number;
+  type?: 'website' | 'article';
+  noindex?: boolean;
+  schema?: Record<string, unknown>[];
+  /** Прозрачная шапка поверх обложки — для страниц с полноэкранным первым экраном. */
+  transparentHeader?: boolean;
+}
+
+const {
+  title,
+  description,
+  image,
+  imageAlt,
+  imageWidth,
+  imageHeight,
+  type,
+  noindex,
+  schema,
+  transparentHeader = false,
+} = Astro.props;
+
+const path = Astro.url.pathname;
+---
+
+<!doctype html>
+<html lang={site.lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <Seo
+      title={title}
+      description={description}
+      path={path}
+      image={image}
+      imageAlt={imageAlt}
+      imageWidth={imageWidth}
+      imageHeight={imageHeight}
+      type={type}
+      noindex={noindex}
+      schema={schema}
+    />
+
+    <link rel="icon" href={withBase("/favicon-32.png")} type="image/png" sizes="32x32" />
+    <link rel="apple-touch-icon" href={withBase("/apple-touch-icon.png")} />
+    <link rel="manifest" href={withBase("/site.webmanifest")} />
+    <meta name="theme-color" content="#0b0f0d" />
+
+    {/* Кириллические начертания нужны в первом же кадре — грузим их заранее. */}
+    <link
+      rel="preload"
+      href={unboundedCyrillic}
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href={manropeCyrillic}
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+
+    <link rel="sitemap" href={withBase("/sitemap-index.xml")} />
+    <link
+      rel="alternate"
+      type="application/rss+xml"
+      title={`Афиша — ${site.name}`}
+      href={withBase("/afisha/rss.xml")}
+    />
+
+    {/* Класс js ставится до первой отрисовки: без него анимации появления
+        отключены и контент виден сразу, даже если скрипты не выполнились. */}
+    <script is:inline>
+      document.documentElement.classList.add('js');
+    </script>
+  </head>
+
+  <body>
+    <a class="skip-link" href="#main">Перейти к содержанию</a>
+
+    <SiteHeader transparent={transparentHeader} />
+
+    <main id="main" tabindex="-1">
+      <slot />
+    </main>
+
+    <SiteFooter />
+
+    <script>
+      // Появление блоков при прокрутке. Чисто декоративно: если скрипт
+      // не выполнится, CSS-правило `.js [data-reveal]` не применится
+      // и контент останется видимым.
+      const targets = document.querySelectorAll('[data-reveal]');
+      if (targets.length && 'IntersectionObserver' in window) {
+        const io = new IntersectionObserver(
+          (entries) => {
+            for (const entry of entries) {
+              if (!entry.isIntersecting) continue;
+              entry.target.classList.add('is-revealed');
+              io.unobserve(entry.target);
+            }
+          },
+          { rootMargin: '0px 0px -12% 0px', threshold: 0.08 },
+        );
+        targets.forEach((el) => io.observe(el));
+      } else {
+        targets.forEach((el) => el.classList.add('is-revealed'));
+      }
+
+      // Высота шапки уезжает в CSS-переменную, чтобы якоря не заезжали под неё.
+      const header = document.querySelector('[data-site-header]');
+      if (header) {
+        const sync = () =>
+          document.documentElement.style.setProperty(
+            '--header-h',
+            `${Math.round(header.getBoundingClientRect().height)}px`,
+          );
+        sync();
+        new ResizeObserver(sync).observe(header);
+      }
+    </script>
+  </body>
+</html>

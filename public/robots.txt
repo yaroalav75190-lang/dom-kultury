@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+# Афиша — самое живое на сайте, её стоит переобходить чаще.
+Sitemap: https://d-k.bar/sitemap-index.xml
+
+# Яндекс — основной поисковик для Екатеринбурга.
+User-agent: Yandex
+Allow: /
+Clean-param: utm_source&utm_medium&utm_campaign&utm_content&utm_term&ref&yclid&_openstat&from&gclid

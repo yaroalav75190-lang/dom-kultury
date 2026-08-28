@@ -1,0 +1,303 @@
+---
+import Logo from '@/components/Logo.astro';
+import OpenStatus from '@/components/OpenStatus.astro';
+import { site } from '@/data/site';
+import { primaryNav, legalNav } from '@/lib/nav';
+import { withBase } from '@/lib/url';
+
+const year = new Date().getFullYear();
+const needsDisclaimer = site.socials.some((s) => 'metaDisclaimer' in s && s.metaDisclaimer);
+---
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer__top">
+      <div class="footer__brand">
+        <Logo class="footer__logo" />
+        <p class="footer__tagline">{site.tagline}</p>
+        <OpenStatus class="footer__status" />
+      </div>
+
+      <div class="footer__col">
+        <h2 class="footer__heading">Разделы</h2>
+        <ul class="footer__list" role="list">
+          {
+            primaryNav.map((item) => (
+              <li>
+                <a href={withBase(item.href)}>{item.label}</a>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+
+      <div class="footer__col">
+        <h2 class="footer__heading">Сервисы</h2>
+        <ul class="footer__list" role="list">
+          <li>
+            <a href={site.external.loyalty.href} target="_blank" rel="noopener noreferrer">
+              {site.external.loyalty.label}
+            </a>
+          </li>
+          <li>
+            <a href={site.external.delivery.href} target="_blank" rel="noopener noreferrer">
+              {site.external.delivery.label}
+            </a>
+          </li>
+          <li>
+            <a href={site.external.playlist.href} target="_blank" rel="noopener noreferrer">
+              {site.external.playlist.label}
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <div class="footer__col footer__col--contacts">
+        <h2 class="footer__heading">Контакты</h2>
+        <address class="footer__address">
+          <a class="footer__link-strong" href={site.contacts.maps} target="_blank" rel="noopener noreferrer">
+            {site.contacts.address.city}, {site.contacts.address.streetShort}
+          </a>
+          <a class="footer__link-strong" href={site.contacts.phone.href}>
+            {site.contacts.phone.display}
+          </a>
+        </address>
+
+        <ul class="footer__socials" role="list">
+          {
+            site.socials.map((s) => (
+              <li>
+                <a href={s.href} target="_blank" rel="noopener noreferrer">
+                  {s.short}
+                  {'metaDisclaimer' in s && s.metaDisclaimer && <sup aria-hidden="true">*</sup>}
+                  <span class="visually-hidden">{s.label}</span>
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+
+      <div class="footer__col footer__col--hours">
+        <h2 class="footer__heading">График работы</h2>
+        <dl class="footer__hours">
+          {
+            site.hours.map((h) => (
+              <div class="footer__hours-row">
+                <dt>{h.label}</dt>
+                <dd>
+                  {h.opens}&nbsp;— {h.closes}
+                </dd>
+              </div>
+            ))
+          }
+          <div class="footer__hours-row footer__hours-row--note">
+            <dt>Бронь</dt>
+            <dd>{site.reservations.hours}</dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+
+    <div class="footer__bottom">
+      <p class="footer__copy">
+        © {year} {site.name} · {site.legal.ageDisclaimer}
+      </p>
+
+      <ul class="footer__legal" role="list">
+        {
+          legalNav.map((item) => (
+            <li>
+              <a href={withBase(item.href)}>{item.label}</a>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+
+    {
+      needsDisclaimer && (
+        <p class="footer__disclaimer">
+          <span aria-hidden="true">* </span>
+          {site.legal.metaDisclaimer}
+        </p>
+      )
+    }
+    <p class="footer__disclaimer">{site.legal.alcoholDisclaimer}</p>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    margin-block-start: var(--space-3xl);
+    padding-block: var(--space-2xl) var(--space-l);
+    background: var(--c-void);
+    border-block-start: 1px solid var(--c-line);
+    font-size: var(--step--1);
+  }
+
+  .footer__top {
+    display: grid;
+    gap: var(--space-xl) var(--space-l);
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  }
+
+  .footer__brand {
+    display: grid;
+    gap: var(--space-xs);
+    align-content: start;
+    grid-column: span 2;
+    min-inline-size: 14rem;
+  }
+
+  .footer__logo {
+    font-size: 1.15rem;
+  }
+
+  .footer__tagline {
+    max-inline-size: 22ch;
+    color: var(--c-fg-muted);
+    text-transform: lowercase;
+  }
+
+  .footer__heading {
+    margin-block-end: var(--space-s);
+    font-family: var(--font-display);
+    font-size: var(--step--2);
+    font-weight: 400;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    color: var(--c-brass);
+  }
+
+  .footer__list {
+    display: grid;
+    gap: 0.55rem;
+    margin: 0;
+  }
+
+  .footer__list a,
+  .footer__address a {
+    color: var(--c-paper-dim);
+    text-decoration: none;
+  }
+  .footer__list a:hover,
+  .footer__address a:hover {
+    color: var(--c-brass-bright);
+  }
+
+  .footer__address {
+    display: grid;
+    gap: 0.5rem;
+    font-style: normal;
+  }
+
+  .footer__link-strong {
+    font-family: var(--font-display);
+    font-weight: 300;
+    font-size: var(--step-0);
+    color: var(--c-paper) !important;
+  }
+
+  .footer__socials {
+    display: flex;
+    gap: var(--space-s);
+    margin: var(--space-m) 0 0;
+  }
+
+  .footer__socials a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-inline-size: 44px;
+    min-block-size: 44px;
+    font-family: var(--font-display);
+    letter-spacing: 0.08em;
+    text-decoration: none;
+    color: var(--c-paper-dim);
+    border: 1px solid var(--c-line);
+    border-radius: var(--radius-pill);
+    padding-inline: 0.5rem;
+    transition:
+      border-color var(--dur-fast) var(--ease-out),
+      color var(--dur-fast) var(--ease-out);
+  }
+  .footer__socials a:hover {
+    color: var(--c-brass);
+    border-color: var(--c-brass-dim);
+  }
+
+  .footer__hours {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0;
+  }
+
+  .footer__hours-row {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-s);
+    /* Пунктирная связка между днём и временем — читается как в афише. */
+    border-block-end: 1px dotted var(--c-line);
+    padding-block-end: 0.35rem;
+  }
+
+  .footer__hours-row dt {
+    color: var(--c-fg-muted);
+  }
+  .footer__hours-row dd {
+    margin: 0;
+    color: var(--c-paper-dim);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .footer__hours-row--note {
+    border-block-end: 0;
+    color: var(--c-brass);
+  }
+  .footer__hours-row--note dd {
+    color: var(--c-brass);
+  }
+
+  .footer__bottom {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--space-s) var(--space-m);
+    margin-block-start: var(--space-2xl);
+    padding-block-start: var(--space-m);
+    border-block-start: 1px solid var(--c-line);
+    color: var(--c-fg-muted);
+  }
+
+  .footer__legal {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-s) var(--space-m);
+    margin: 0;
+  }
+  .footer__legal a {
+    color: var(--c-fg-muted);
+    text-decoration: none;
+  }
+  .footer__legal a:hover {
+    color: var(--c-paper-dim);
+  }
+
+  .footer__disclaimer {
+    margin-block-start: var(--space-m);
+    max-inline-size: var(--measure);
+    font-size: var(--step--2);
+    color: color-mix(in oklab, var(--c-paper-mute) 75%, transparent);
+  }
+
+  @media (max-width: 40rem) {
+    .footer__brand {
+      grid-column: 1 / -1;
+    }
+    .footer__top {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+</style>

@@ -1,0 +1,174 @@
+---
+/**
+ * Кнопка или ссылка-кнопка.
+ *
+ * Отрисовывается тегом <a>, если передан href, и <button> в остальных
+ * случаях — чтобы навигация оставалась навигацией: открывалась в новой
+ * вкладке, копировалась и индексировалась.
+ */
+
+interface Props {
+  href?: string;
+  variant?: 'primary' | 'secondary' | 'ghost' | 'quiet';
+  size?: 'sm' | 'md' | 'lg';
+  external?: boolean;
+  type?: 'button' | 'submit';
+  class?: string;
+  wide?: boolean;
+  [key: string]: unknown;
+}
+
+const {
+  href,
+  variant = 'primary',
+  size = 'md',
+  external = false,
+  type = 'button',
+  class: className,
+  wide = false,
+  ...rest
+} = Astro.props;
+
+const Tag = href ? 'a' : 'button';
+
+const externalAttrs = external
+  ? { target: '_blank', rel: 'noopener noreferrer' }
+  : {};
+---
+
+<Tag
+  class:list={['btn', `btn--${variant}`, `btn--${size}`, wide && 'btn--wide', className]}
+  href={href}
+  type={href ? undefined : type}
+  {...externalAttrs}
+  {...rest}
+>
+  <span class="btn__label"><slot /></span>
+  {
+    external && (
+      <>
+        <svg class="btn__ext" viewBox="0 0 12 12" aria-hidden="true" focusable="false">
+          <path
+            d="M3 9 L9 3 M4.2 3 H9 V7.8"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.4"
+            stroke-linecap="square"
+          />
+        </svg>
+        <span class="visually-hidden"> (откроется в новой вкладке)</span>
+      </>
+    )
+  }
+</Tag>
+
+<style>
+  .btn {
+    --btn-bg: transparent;
+    --btn-fg: var(--c-paper);
+    --btn-border: var(--c-line-strong);
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5em;
+
+    font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-decoration: none;
+    white-space: nowrap;
+
+    background: var(--btn-bg);
+    color: var(--btn-fg);
+    border: 1px solid var(--btn-border);
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+
+    /* Минимальная тач-цель 44×44 — даже у мелкого варианта. */
+    min-block-size: 44px;
+
+    transition:
+      background-color var(--dur-base) var(--ease-out),
+      border-color var(--dur-base) var(--ease-out),
+      color var(--dur-base) var(--ease-out),
+      transform var(--dur-fast) var(--ease-out);
+  }
+
+  .btn:hover {
+    transform: translateY(-1px);
+  }
+  .btn:active {
+    transform: translateY(0);
+  }
+
+  /* --- Размеры --- */
+  .btn--sm {
+    font-size: var(--step--2);
+    padding-inline: var(--space-s);
+  }
+  .btn--md {
+    font-size: var(--step--1);
+    padding-inline: var(--space-m);
+  }
+  .btn--lg {
+    font-size: var(--step-0);
+    padding-inline: var(--space-l);
+    min-block-size: 56px;
+  }
+
+  .btn--wide {
+    inline-size: 100%;
+  }
+
+  /* --- Варианты --- */
+  .btn--primary {
+    --btn-bg: var(--c-brass);
+    --btn-fg: var(--c-ink);
+    --btn-border: var(--c-brass);
+    font-weight: 500;
+  }
+  .btn--primary:hover {
+    --btn-bg: var(--c-brass-bright);
+    --btn-border: var(--c-brass-bright);
+  }
+
+  .btn--secondary {
+    --btn-fg: var(--c-brass);
+    --btn-border: color-mix(in oklab, var(--c-brass) 45%, transparent);
+  }
+  .btn--secondary:hover {
+    --btn-bg: var(--c-brass-wash);
+    --btn-border: var(--c-brass);
+  }
+
+  .btn--ghost {
+    --btn-fg: var(--c-paper);
+    --btn-border: var(--c-line-strong);
+  }
+  .btn--ghost:hover {
+    --btn-bg: var(--c-surface-2);
+    --btn-border: var(--c-paper-mute);
+  }
+
+  .btn--quiet {
+    --btn-border: transparent;
+    --btn-fg: var(--c-paper-dim);
+    padding-inline: var(--space-2xs);
+  }
+  .btn--quiet:hover {
+    --btn-fg: var(--c-brass-bright);
+  }
+
+  .btn__ext {
+    inline-size: 0.75em;
+    block-size: 0.75em;
+    opacity: 0.7;
+    flex: none;
+  }
+
+  a.btn:hover {
+    color: var(--btn-fg);
+  }
+</style>

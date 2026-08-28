@@ -1,0 +1,606 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import MenuSection from '@/components/MenuSection.astro';
+import Button from '@/components/Button.astro';
+import { site } from '@/data/site';
+import { plural } from '@/lib/datetime';
+import { withBase } from '@/lib/url';
+
+const cards = [
+  { id: 'kitchen', label: 'Кухня' },
+  { id: 'bar', label: 'Бар' },
+] as const;
+
+/**
+ * Порядок разделов.
+ *
+ * Сортировка только по `order` перемешивала бар и кухню в разметке
+ * (у обеих карт нумерация начинается с 10). С JS этого не видно —
+ * лишнее скрыто, — но без него страница превращалась в чересполосицу,
+ * и в микроразметке разделы шли вперемешку. Сначала карта, потом порядок.
+ */
+const cardOrder = new Map(cards.map((c, i) => [c.id as string, i]));
+
+const all = (await getCollection('menu'))
+  .filter((s) => s.data.card !== 'banquet')
+  .sort((a, b) => {
+    const byCard =
+      (cardOrder.get(a.data.card) ?? 99) - (cardOrder.get(b.data.card) ?? 99);
+    return byCard !== 0 ? byCard : a.data.order - b.data.order;
+  });
+
+/** Группы внутри карты — в том порядке, в котором идут разделы. */
+const groupsByCard = new Map<string, string[]>();
+for (const s of all) {
+  const list = groupsByCard.get(s.data.card) ?? [];
+  const g = s.data.group ?? 'Прочее';
+  if (!list.includes(g)) list.push(g);
+  groupsByCard.set(s.data.card, list);
+}
+
+const itemCount = all.reduce((n, s) => n + s.data.items.length, 0);
+
+const prices = all.flatMap((s) => s.data.items.map((i) => i.price).filter((p): p is number => !!p));
+const minPrice = Math.min(...prices);
+const maxPrice = Math.max(...prices);
+
+/**
+ * Schema.org Menu. Раньше меню было набором картинок и для поисковика
+ * не существовало вовсе — теперь это структура с разделами и ценами.
+ */
+const menuSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Menu',
+  // @id и обратная ссылка на заведение: без них Menu — висящий узел,
+  // который поисковик не может связать с баром.
+  '@id': `${site.url}/menu/#menu`,
+  url: `${site.url}/menu/`,
+  name: `Меню — ${site.name}`,
+  inLanguage: 'ru',
+  provider: { '@id': `${site.url}/#business` },
+  hasMenuSection: all.map((s) => ({
+    '@type': 'MenuSection',
+    name: s.data.title,
+    hasMenuItem: s.data.items.map((i) => ({
+      '@type': 'MenuItem',
+      name: i.name,
+      ...(i.description ? { description: i.description } : {}),
+      ...(i.price
+        ? { offers: { '@type': 'Offer', price: i.price, priceCurrency: 'RUB' } }
+        : {}),
+    })),
+  })),
+};
+
+const breadcrumbs = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Главная', item: `${site.url}/` },
+    { '@type': 'ListItem', position: 2, name: 'Меню' },
+  ],
+};
+---
+
+<BaseLayout
+  title="Меню бара и кухни"
+  description={`Полное меню «${site.name}»: авторские и классические коктейли, настойки, вино, кухня и бранчи. ${itemCount} позиций с составами и ценами от ${minPrice} ₽. Екатеринбург, Бажова, 193.`}
+  schema={[menuSchema, breadcrumbs]}
+>
+  <section class="section head">
+    <div class="container">
+      <p class="eyebrow" data-reveal>Бар и кухня</p>
+      <h1 class="head__title" data-reveal>Меню</h1>
+      <p class="head__lede" data-reveal>
+        {itemCount} {plural(itemCount, ['позиция', 'позиции', 'позиций'])} с составами,
+        граммовками и ценами — от {minPrice} до {maxPrice.toLocaleString('ru-RU')} ₽.
+        Меню сезонное, отдельные позиции могут закончиться.
+      </p>
+
+      <ul class="offers" role="list">
+        {
+          site.offers.map((offer) => (
+            <li class="offer" data-reveal>
+              <p class="offer__title">
+                {'href' in offer && offer.href ? (
+                  <a class="offer__link" href={withBase(offer.href)}>
+                    {offer.title}
+                  </a>
+                ) : (
+                  offer.title
+                )}
+              </p>
+              <p class="offer__when">{offer.when}</p>
+              {'price' in offer && offer.price && (
+                <p class="offer__price">
+                  {offer.price.toLocaleString('ru-RU')} <span>{offer.priceNote}</span>
+                </p>
+              )}
+              {'note' in offer && offer.note && <p class="offer__note">{offer.note}</p>}
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  {/* Панель управления меню. Липкая, чтобы поиск и вкладки были
+      под рукой на длинной странице. */}
+  <div class="bar" data-menu-bar>
+    <div class="container bar__inner">
+      {/* Не role="tablist": паттерн ARIA Tabs требует tabpanel,
+          aria-controls и управления стрелками, а здесь кнопки просто
+          фильтруют один общий список. Группа кнопок с aria-pressed
+          описывает происходящее честнее. */}
+      <div class="bar__cards" role="group" aria-label="Карта меню">
+        {
+          cards.map((card, i) => (
+            <button
+              class:list={['tab', i === 0 && 'is-active']}
+              type="button"
+              aria-pressed={i === 0 ? 'true' : 'false'}
+              data-card-tab={card.id}
+            >
+              {card.label}
+            </button>
+          ))
+        }
+      </div>
+
+      <div class="bar__search">
+        <label class="visually-hidden" for="menu-search">Поиск по меню</label>
+        <input
+          id="menu-search"
+          class="search"
+          type="search"
+          placeholder="Найти блюдо или коктейль"
+          autocomplete="off"
+          data-menu-search
+        />
+        <p class="bar__result" data-search-count role="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="groups" data-groups>
+        {
+          cards.map((card) =>
+            (groupsByCard.get(card.id) ?? []).map((group, i) => (
+              <button
+                class:list={['chip', card.id === 'kitchen' && i === 0 && 'is-active']}
+                type="button"
+                data-group-chip={group}
+                data-for-card={card.id}
+                hidden={card.id !== 'kitchen'}
+              >
+                {group}
+              </button>
+            )),
+          )
+        }
+      </div>
+    </div>
+  </div>
+
+  <section class="section menu-body">
+    <div class="container">
+      {all.map((section) => <MenuSection section={section} />)}
+
+      <p class="no-results" data-no-results hidden>
+        По запросу ничего не нашлось. Попробуйте другое слово — или спросите
+        у бармена: карта меняется чаще, чем сайт.
+      </p>
+    </div>
+  </section>
+
+  <section class="section cta">
+    <div class="container cta__inner" data-reveal>
+      <div>
+        <h2 class="cta__title">Забронировать стол</h2>
+        <p class="cta__text">
+          Бронь — {site.reservations.hours}. На события лучше писать заранее:
+          на популярные вечера места заканчиваются за несколько дней.
+        </p>
+      </div>
+      <div class="cta__actions">
+        <Button href={site.reservations.telegram} variant="primary" size="lg" external>
+          Написать в Telegram
+        </Button>
+        <Button href={site.contacts.phone.href} variant="ghost" size="lg">
+          {site.contacts.phone.display}
+        </Button>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  const sections = [...document.querySelectorAll<HTMLElement>('[data-menu-section]')];
+  const cardTabs = [...document.querySelectorAll<HTMLButtonElement>('[data-card-tab]')];
+  const groupChips = [...document.querySelectorAll<HTMLButtonElement>('[data-group-chip]')];
+  const search = document.querySelector<HTMLInputElement>('[data-menu-search]');
+  const counter = document.querySelector<HTMLElement>('[data-search-count]');
+  const noResults = document.querySelector<HTMLElement>('[data-no-results]');
+
+  let card = 'kitchen';
+  let group: string | null = null;
+  let query = '';
+
+  function apply() {
+    const q = query.trim().toLowerCase();
+    let matches = 0;
+
+    for (const section of sections) {
+      const inCard = section.dataset.card === card;
+      // Поиск идёт по всему меню сразу: искать «мохито», уже выбрав
+      // вкладку «Кухня», — заведомо промах.
+      const groupOk = q ? true : !group || section.dataset.group === group;
+      let visibleItems = 0;
+
+      for (const item of section.querySelectorAll<HTMLElement>('[data-menu-item]')) {
+        const hit = !q || (item.dataset.search ?? '').includes(q);
+        item.hidden = !hit;
+        if (hit) visibleItems++;
+      }
+
+      const show = (q ? true : inCard && groupOk) && visibleItems > 0;
+      section.hidden = !show;
+      if (show) matches += visibleItems;
+    }
+
+    if (noResults) noResults.hidden = matches > 0;
+
+    if (counter) {
+      counter.textContent = q
+        ? matches > 0
+          ? `Найдено: ${matches}`
+          : 'Ничего не найдено'
+        : '';
+    }
+
+    // Пока идёт поиск, вкладки не управляют выдачей — гасим их.
+    document.querySelector('[data-menu-bar]')?.classList.toggle('is-searching', Boolean(q));
+  }
+
+  for (const tab of cardTabs) {
+    tab.addEventListener('click', () => {
+      card = tab.dataset.cardTab!;
+      group = null;
+
+      for (const t of cardTabs) {
+        const active = t === tab;
+        t.classList.toggle('is-active', active);
+        t.setAttribute('aria-pressed', String(active));
+      }
+
+      let first = true;
+      for (const chip of groupChips) {
+        const mine = chip.dataset.forCard === card;
+        chip.hidden = !mine;
+        chip.classList.toggle('is-active', mine && first);
+        if (mine && first) {
+          group = chip.dataset.groupChip!;
+          first = false;
+        }
+      }
+
+      apply();
+    });
+  }
+
+  for (const chip of groupChips) {
+    chip.addEventListener('click', () => {
+      group = chip.dataset.groupChip!;
+      for (const c of groupChips) {
+        if (c.dataset.forCard === card) c.classList.toggle('is-active', c === chip);
+      }
+      apply();
+    });
+  }
+
+  if (search) {
+    let timer: number;
+    search.addEventListener('input', () => {
+      // Ввод обгоняет перерисовку 300 позиций — ждём паузы в наборе.
+      clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        query = search.value;
+        apply();
+      }, 120);
+    });
+  }
+
+  // Первый выбранный чип определяет стартовую группу.
+  group = groupChips.find((c) => c.classList.contains('is-active'))?.dataset.groupChip ?? null;
+  // Браузер восстанавливает содержимое поля поиска при возврате «назад» —
+  // без этой строки выдача не соответствовала бы тому, что видно в поле.
+  if (search && search.value) query = search.value;
+  apply();
+
+  /**
+   * Переход по якорю на раздел меню.
+   *
+   * Ссылка вида /menu#brunch-1-sandwich-base ведёт в раздел, который
+   * по умолчанию скрыт другой вкладкой. Поэтому сначала переключаем
+   * карту и группу на те, которым раздел принадлежит, и только потом
+   * прокручиваем — иначе переход был бы «в никуда».
+   */
+  function openHash(hash: string) {
+    const id = hash.replace(/^#/, '');
+    if (!id) return;
+
+    const target = document.getElementById(id);
+    if (!target || !target.matches('[data-menu-section]')) return;
+
+    const targetCard = target.dataset.card;
+    const targetGroup = target.dataset.group;
+    if (!targetCard) return;
+
+    if (search) search.value = '';
+    query = '';
+    card = targetCard;
+    group = targetGroup || null;
+
+    for (const t of cardTabs) {
+      const active = t.dataset.cardTab === card;
+      t.classList.toggle('is-active', active);
+      t.setAttribute('aria-pressed', String(active));
+    }
+    for (const chip of groupChips) {
+      const mine = chip.dataset.forCard === card;
+      chip.hidden = !mine;
+      chip.classList.toggle('is-active', mine && chip.dataset.groupChip === group);
+    }
+
+    apply();
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  if (location.hash) openHash(location.hash);
+  window.addEventListener('hashchange', () => openHash(location.hash));
+</script>
+
+<style>
+  .head__title {
+    margin-block: var(--space-s) var(--space-m);
+    font-size: var(--step-6);
+    text-transform: uppercase;
+  }
+
+  .head__lede {
+    max-inline-size: 52ch;
+    font-size: var(--step-1);
+    color: var(--c-paper-dim);
+  }
+
+  /* --- Предложения --- */
+  .offers {
+    display: grid;
+    gap: var(--space-s);
+    grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr));
+    margin: var(--space-xl) 0 0;
+  }
+
+  .offer {
+    position: relative;
+    padding: var(--space-m);
+    background:
+      linear-gradient(140deg, var(--c-green-deep), var(--c-surface) 75%);
+    border: 1px solid var(--c-line);
+    border-radius: var(--radius-l);
+  }
+
+  .offer__title {
+    font-family: var(--font-display);
+    font-size: var(--step-2);
+    font-weight: 300;
+    text-transform: uppercase;
+    color: var(--c-paper);
+  }
+
+  .offer__link {
+    color: inherit;
+    text-decoration: none;
+  }
+  /* Кликается вся плашка, но в дереве доступности остаётся одна ссылка. */
+  .offer__link::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+  .offer__link:hover {
+    color: var(--c-brass-bright);
+  }
+
+  .offer__when {
+    margin-block-start: 0.35em;
+    font-size: var(--step--1);
+    color: var(--c-brass);
+  }
+
+  .offer__price {
+    margin-block-start: var(--space-s);
+    font-family: var(--font-display);
+    font-size: var(--step-3);
+    font-weight: 200;
+    color: var(--c-paper);
+  }
+  .offer__price span {
+    font-size: var(--step--1);
+    color: var(--c-fg-muted);
+  }
+
+  .offer__note {
+    margin-block-start: var(--space-2xs);
+    font-size: var(--step--1);
+    color: var(--c-fg-muted);
+  }
+
+  /* --- Липкая панель --- */
+  .bar {
+    position: sticky;
+    inset-block-start: var(--header-offset, 72px);
+    z-index: var(--z-sticky);
+    padding-block: var(--space-xs);
+    background: color-mix(in oklab, var(--c-ink) 92%, transparent);
+    backdrop-filter: blur(14px);
+    border-block: 1px solid var(--c-line);
+  }
+
+  .bar__inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-s);
+  }
+
+  .bar__cards {
+    display: flex;
+    gap: 0;
+    padding: 3px;
+    background: var(--c-surface);
+    border: 1px solid var(--c-line);
+    border-radius: var(--radius-pill);
+  }
+
+  .tab {
+    min-block-size: 38px;
+    padding-inline: var(--space-m);
+    background: transparent;
+    border: 0;
+    border-radius: var(--radius-pill);
+    color: var(--c-paper-dim);
+    font-family: var(--font-display);
+    font-size: var(--step--1);
+    font-weight: 300;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition:
+      background-color var(--dur-fast) var(--ease-out),
+      color var(--dur-fast) var(--ease-out);
+  }
+
+  .tab.is-active {
+    background: var(--c-brass);
+    color: var(--c-ink);
+  }
+
+  .bar__search {
+    display: flex;
+    align-items: center;
+    gap: var(--space-s);
+    flex: 1 1 16rem;
+    justify-content: flex-end;
+  }
+
+  .search {
+    inline-size: min(20rem, 100%);
+    min-block-size: 42px;
+    padding-inline: var(--space-s);
+    background: var(--c-surface);
+    color: var(--c-paper);
+    border: 1px solid var(--c-line-strong);
+    border-radius: var(--radius-pill);
+    font-size: var(--step--1);
+  }
+  .search::placeholder {
+    color: var(--c-fg-muted);
+  }
+  .search:focus-visible {
+    border-color: var(--c-brass);
+  }
+
+  .bar__result {
+    font-size: var(--step--2);
+    color: var(--c-brass);
+    white-space: nowrap;
+  }
+
+  .groups {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: var(--space-2xs);
+    margin-block-start: var(--space-xs);
+    padding-block-end: 2px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .groups::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Во время поиска вкладки и группы не влияют на выдачу — показываем это. */
+  .bar.is-searching .groups,
+  .bar.is-searching .bar__cards {
+    opacity: 0.4;
+    pointer-events: none;
+  }
+
+  .chip {
+    min-block-size: 36px;
+    padding-inline: var(--space-s);
+    background: transparent;
+    border: 1px solid var(--c-line-strong);
+    border-radius: var(--radius-pill);
+    color: var(--c-paper-dim);
+    font-size: var(--step--2);
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background-color var(--dur-fast) var(--ease-out),
+      border-color var(--dur-fast) var(--ease-out),
+      color var(--dur-fast) var(--ease-out);
+  }
+  .chip:hover {
+    border-color: var(--c-brass-dim);
+    color: var(--c-paper);
+  }
+  .chip.is-active {
+    background: var(--c-brass-wash);
+    border-color: var(--c-brass);
+    color: var(--c-brass-bright);
+  }
+
+  .menu-body {
+    padding-block-start: var(--space-m);
+  }
+
+  .no-results {
+    padding-block: var(--space-2xl);
+    max-inline-size: 46ch;
+    color: var(--c-fg-muted);
+  }
+
+  /* --- Призыв --- */
+  .cta__inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--space-l);
+    padding: var(--space-xl);
+    background: var(--c-surface);
+    border: 1px solid var(--c-line);
+    border-radius: var(--radius-l);
+  }
+
+  .cta__title {
+    font-size: var(--step-4);
+    text-transform: uppercase;
+  }
+
+  .cta__text {
+    max-inline-size: 46ch;
+    margin-block-start: var(--space-s);
+    color: var(--c-paper-dim);
+  }
+
+  .cta__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2xs);
+  }
+</style>

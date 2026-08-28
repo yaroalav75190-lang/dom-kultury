@@ -1,0 +1,168 @@
+---
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+  section: CollectionEntry<'menu'>;
+  /**
+   * Уровень заголовка раздела. На /menu разделы идут сразу под h1,
+   * значит это h2; на /bankety они вложены в раздел «Банкетное меню»,
+   * значит h3. Пропуск уровней ломает навигацию по заголовкам,
+   * которой пользуются со скринридером.
+   */
+  level?: 2 | 3;
+}
+
+const { section, level = 2 } = Astro.props;
+const d = section.data;
+
+const SectionHeading = `h${level}` as 'h2' | 'h3';
+const ItemHeading = `h${level + 1}` as 'h3' | 'h4';
+
+/** «1 200 ₽» — с неразрывным пробелом, чтобы цена не переносилась. */
+const price = (n: number) => `${n.toLocaleString('ru-RU').replace(/\s/g, ' ')} ₽`;
+
+---
+
+<section
+  class="msec"
+  id={section.id}
+  data-menu-section
+  data-card={d.card}
+  data-group={d.group ?? ''}
+>
+  <SectionHeading class="msec__title">{d.title}</SectionHeading>
+  {d.note && <p class="msec__note">{d.note}</p>}
+
+  <ul class="msec__list" role="list">
+    {
+      d.items.map((item) => (
+        <li class="mitem" data-menu-item data-search={`${item.name} ${item.description ?? ''}`.toLowerCase()}>
+          <div class="mitem__main">
+            <ItemHeading class="mitem__name">{item.name}</ItemHeading>
+            {item.description && <p class="mitem__descr">{item.description}</p>}
+          </div>
+
+          <div class="mitem__right">
+            {item.measure && <span class="mitem__measure">{item.measure}</span>}
+            <span class="mitem__price">
+              {item.price !== undefined ? price(item.price) : <span class="mitem__price-none">по основе</span>}
+            </span>
+          </div>
+        </li>
+      ))
+    }
+  </ul>
+
+</section>
+
+<style>
+  .msec {
+    padding-block: var(--space-l);
+    border-block-start: 1px solid var(--c-line);
+    scroll-margin-block-start: calc(var(--header-h, 72px) + 6rem);
+  }
+
+  .msec__title {
+    font-size: var(--step-2);
+    font-weight: 300;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--c-brass);
+  }
+
+  .msec__note {
+    margin-block-start: 0.35em;
+    max-inline-size: 52ch;
+    font-size: var(--step--1);
+    color: var(--c-fg-muted);
+  }
+
+  .msec__list {
+    display: grid;
+    gap: 0;
+    margin: var(--space-m) 0 0;
+  }
+
+  .mitem {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-m);
+    padding-block: var(--space-xs);
+    border-block-end: 1px solid color-mix(in oklab, var(--c-line) 70%, transparent);
+  }
+
+  .mitem:last-child {
+    border-block-end: 0;
+  }
+
+  .mitem__main {
+    min-inline-size: 0;
+  }
+
+  .mitem__name {
+    font-family: var(--font-text);
+    font-size: var(--step-0);
+    font-weight: 500;
+    line-height: 1.3;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--c-paper);
+  }
+
+  .mitem__descr {
+    margin-block-start: 0.25em;
+    max-inline-size: 56ch;
+    font-size: var(--step--1);
+    line-height: 1.45;
+    color: var(--c-fg-muted);
+  }
+
+  .mitem__right {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-s);
+    flex: none;
+    /* Цифры выстраиваются в колонку — глаз читает цены сверху вниз. */
+    font-variant-numeric: tabular-nums;
+  }
+
+  .mitem__measure {
+    font-size: var(--step--2);
+    color: color-mix(in oklab, var(--c-paper-mute) 80%, transparent);
+    min-inline-size: 3.5ch;
+    text-align: end;
+  }
+
+  .mitem__price {
+    font-family: var(--font-display);
+    font-size: var(--step-0);
+    font-weight: 300;
+    color: var(--c-paper);
+    min-inline-size: 6ch;
+    text-align: end;
+    white-space: nowrap;
+  }
+
+  .mitem__price-none {
+    font-size: var(--step--2);
+    color: var(--c-fg-muted);
+  }
+
+  @media (max-width: 34rem) {
+    .mitem {
+      flex-wrap: wrap;
+      gap: 0.25rem var(--space-s);
+    }
+    .mitem__right {
+      inline-size: 100%;
+      justify-content: flex-start;
+      gap: var(--space-s);
+    }
+    .mitem__measure,
+    .mitem__price {
+      min-inline-size: 0;
+      text-align: start;
+    }
+  }
+</style>

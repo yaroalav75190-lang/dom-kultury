@@ -1,0 +1,314 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Button from '@/components/Button.astro';
+import OpenStatus from '@/components/OpenStatus.astro';
+import BookingForm from '@/components/BookingForm.astro';
+import { site } from '@/data/site';
+
+const mapEmbed =
+  'https://yandex.ru/map-widget/v1/?ll=' +
+  `${site.contacts.geo.longitude}%2C${site.contacts.geo.latitude}&z=17&mode=search&text=` +
+  encodeURIComponent(`${site.name} ${site.contacts.address.full}`);
+
+const breadcrumbs = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Главная', item: `${site.url}/` },
+    { '@type': 'ListItem', position: 2, name: 'Контакты' },
+  ],
+};
+---
+
+<BaseLayout
+  title="Контакты"
+  description={`Адрес, телефон и часы работы бара «${site.name}»: ${site.contacts.address.full}. Бронь стола ${site.reservations.hours}.`}
+  schema={[breadcrumbs]}
+>
+  <section class="section">
+    <div class="container">
+      <p class="eyebrow" data-reveal>Контакты</p>
+      <h1 class="title" data-reveal>Как нас найти</h1>
+
+      <div class="grid">
+        <div class="col">
+          <h2 class="col__heading">Адрес</h2>
+          <address class="address">
+            <a class="address__line" href={site.contacts.maps} target="_blank" rel="noopener noreferrer">
+              {site.contacts.address.city},<br />{site.contacts.address.street}
+            </a>
+          </address>
+          <p class="col__note">
+            Точный вход и подъезд к дому удобнее смотреть на карте.
+          </p>
+          <Button href={site.contacts.maps} variant="secondary" size="md" external>
+            Открыть в Яндекс Картах
+          </Button>
+        </div>
+
+        <div class="col">
+          <h2 class="col__heading">Связь</h2>
+          <p class="phone">
+            <a href={site.contacts.phone.href}>{site.contacts.phone.display}</a>
+          </p>
+          <p class="col__note">Бронь стола — {site.reservations.hours}.</p>
+          <ul class="links" role="list">
+            {
+              site.socials.map((s) => (
+                <li>
+                  <a href={s.href} target="_blank" rel="noopener noreferrer">
+                    {s.label}
+                    {'metaDisclaimer' in s && s.metaDisclaimer && <sup aria-hidden="true">*</sup>}
+                  </a>
+                </li>
+              ))
+            }
+          </ul>
+        </div>
+
+        <div class="col">
+          <h2 class="col__heading">График работы</h2>
+          <OpenStatus class="col__status" />
+          <dl class="hours">
+            {
+              site.hours.map((h) => (
+                <div class="hours__row">
+                  <dt>{h.label}</dt>
+                  <dd>
+                    {h.opens}&nbsp;— {h.closes}
+                  </dd>
+                </div>
+              ))
+            }
+          </dl>
+          <p class="col__note">{site.legal.ageDisclaimer}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="bron">
+    <div class="container container--narrow">
+      <p class="eyebrow" data-reveal>Бронирование</p>
+      <h2 class="booking-title" data-reveal>Забронировать стол</h2>
+      <p class="booking-lede" data-reveal>
+        Заполните — и заявка уйдёт в Telegram одним сообщением, без переписки
+        «а на сколько человек?». Или просто позвоните.
+      </p>
+      <BookingForm />
+    </div>
+  </section>
+
+  <section class="section section--map">
+    <div class="container">
+      <h2 class="visually-hidden">Карта</h2>
+
+      {/* Карта — сторонний сервис. Пока посетитель не попросил её показать,
+          никакие запросы к Яндексу не уходят: грузим iframe по клику. */}
+      <div class="map" data-map data-src={mapEmbed}>
+        <button class="map__load" type="button" data-map-load>
+          <span class="map__load-title">Показать карту</span>
+          <span class="map__load-note">
+            Загрузится виджет Яндекс Карт — это сторонний сервис со своими файлами cookie.
+          </span>
+        </button>
+        <noscript>
+          <p class="map__fallback">
+            <a href={site.contacts.maps} target="_blank" rel="noopener noreferrer">
+              Открыть карту на Яндекс Картах
+            </a>
+          </p>
+        </noscript>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  for (const holder of document.querySelectorAll<HTMLElement>('[data-map]')) {
+    const button = holder.querySelector<HTMLButtonElement>('[data-map-load]');
+    const src = holder.dataset.src;
+    if (!button || !src) continue;
+
+    button.addEventListener('click', () => {
+      const frame = document.createElement('iframe');
+      frame.src = src;
+      frame.title = 'Дом культуры на карте Екатеринбурга';
+      frame.loading = 'lazy';
+      frame.setAttribute('allowfullscreen', '');
+      frame.referrerPolicy = 'no-referrer-when-downgrade';
+      frame.className = 'map__frame';
+      holder.replaceChildren(frame);
+      frame.focus();
+    });
+  }
+</script>
+
+<style>
+  .booking-title {
+    margin-block: var(--space-s) var(--space-s);
+    font-size: var(--step-4);
+    text-transform: uppercase;
+  }
+
+  .booking-lede {
+    max-inline-size: 50ch;
+    margin-block-end: var(--space-l);
+    color: var(--c-paper-dim);
+  }
+
+  .title {
+    margin-block: var(--space-s) var(--space-xl);
+    font-size: var(--step-5);
+    text-transform: uppercase;
+  }
+
+  .grid {
+    display: grid;
+    gap: var(--space-xl);
+    grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
+  }
+
+  .col__heading {
+    margin-block-end: var(--space-s);
+    font-family: var(--font-display);
+    font-size: var(--step--2);
+    font-weight: 400;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    color: var(--c-brass);
+  }
+
+  .address {
+    font-style: normal;
+  }
+
+  .address__line,
+  .phone a {
+    font-family: var(--font-display);
+    font-size: var(--step-2);
+    font-weight: 300;
+    text-decoration: none;
+    color: var(--c-paper);
+    line-height: 1.25;
+  }
+  .address__line:hover,
+  .phone a:hover {
+    color: var(--c-brass-bright);
+  }
+
+  .col__note {
+    margin-block: var(--space-s) var(--space-m);
+    max-inline-size: 34ch;
+    font-size: var(--step--1);
+    color: var(--c-fg-muted);
+  }
+
+  .col__status {
+    margin-block-end: var(--space-s);
+  }
+
+  .links {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0;
+  }
+  .links a {
+    color: var(--c-paper-dim);
+    text-decoration: none;
+  }
+  .links a:hover {
+    color: var(--c-brass-bright);
+  }
+
+  .hours {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0 0 var(--space-s);
+  }
+
+  .hours__row {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-s);
+    padding-block-end: 0.35rem;
+    border-block-end: 1px dotted var(--c-line);
+  }
+  .hours__row dt {
+    color: var(--c-fg-muted);
+  }
+  .hours__row dd {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  /* --- Карта --- */
+  .section--map {
+    padding-block-start: 0;
+  }
+
+  .map {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    max-block-size: 34rem;
+    overflow: hidden;
+    border: 1px solid var(--c-line);
+    border-radius: var(--radius-l);
+    background:
+      repeating-linear-gradient(
+        45deg,
+        var(--c-surface),
+        var(--c-surface) 12px,
+        var(--c-surface-2) 12px,
+        var(--c-surface-2) 24px
+      );
+  }
+
+  .map__load {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: var(--space-2xs);
+    padding: var(--space-l);
+    background: color-mix(in oklab, var(--c-ink) 72%, transparent);
+    border: 0;
+    color: inherit;
+    cursor: pointer;
+    text-align: center;
+    transition: background-color var(--dur-base) var(--ease-out);
+  }
+  .map__load:hover {
+    background: color-mix(in oklab, var(--c-ink) 58%, transparent);
+  }
+
+  .map__load-title {
+    font-family: var(--font-display);
+    font-size: var(--step-2);
+    font-weight: 300;
+    text-transform: uppercase;
+    color: var(--c-brass);
+  }
+
+  .map__load-note {
+    max-inline-size: 40ch;
+    font-size: var(--step--1);
+    color: var(--c-fg-muted);
+  }
+
+  .map__fallback {
+    position: absolute;
+    inset-block-end: var(--space-m);
+    inset-inline: 0;
+    text-align: center;
+  }
+
+  .map :global(.map__frame) {
+    inline-size: 100%;
+    block-size: 100%;
+    border: 0;
+    display: block;
+  }
+</style>

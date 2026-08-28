@@ -1,0 +1,236 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import { site } from '@/data/site';
+
+/**
+ * Правовые документы.
+ *
+ * На прежнем сайте эти три пункта в подвале были не ссылками, а обычным
+ * текстом — то есть документов не существовало вовсе, хотя сайт принимал
+ * заявки на бронь. Здесь описано ровно то, что сайт действительно делает.
+ *
+ * ВАЖНО. Реквизиты оператора обязан подставить владелец заведения:
+ * они помечены как REQUISITES и вынесены в README в список задач.
+ * Придумывать ИНН, ОГРН или наименование юрлица нельзя.
+ */
+
+const OPERATOR_PLACEHOLDER = '[реквизиты оператора: наименование, ИНН, ОГРН, юридический адрес]';
+
+const breadcrumbs = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Главная', item: `${site.url}/` },
+    { '@type': 'ListItem', position: 2, name: 'Правовая информация' },
+  ],
+};
+---
+
+<BaseLayout
+  title="Правовая информация"
+  description="Политика конфиденциальности, согласие на обработку персональных данных и условия бронирования Дома культуры."
+  schema={[breadcrumbs]}
+>
+  <section class="section">
+    <div class="container container--narrow">
+      <p class="eyebrow">Документы</p>
+      <h1 class="title">Правовая информация</h1>
+
+      <nav class="toc" aria-label="Разделы страницы">
+        <ul role="list">
+          <li><a href="#konfidentsialnost">Политика конфиденциальности</a></li>
+          <li><a href="#soglasie">Согласие на обработку персональных данных</a></li>
+          <li><a href="#oferta">Условия бронирования</a></li>
+        </ul>
+      </nav>
+
+      <article class="doc" id="konfidentsialnost">
+        <h2>Политика конфиденциальности</h2>
+
+        <h3>Кто обрабатывает данные</h3>
+        <p>
+          Оператором персональных данных является {OPERATOR_PLACEHOLDER}, далее — «Дом культуры».
+          Связаться с оператором можно по телефону{' '}
+          <a href={site.contacts.phone.href}>{site.contacts.phone.display}</a> или по адресу{' '}
+          {site.contacts.address.full}.
+        </p>
+
+        <h3>Какие данные собирает сайт</h3>
+        <p>
+          Сайт {site.url} не регистрирует пользователей, не заводит личных кабинетов
+          и не устанавливает собственных файлов cookie. Форма бронирования работает
+          целиком в вашем браузере: введённые имя, дата, время и число гостей
+          собираются в текст сообщения и никуда не отправляются с сайта — вы сами
+          отправляете это сообщение из своего Telegram или сообщаете по телефону.
+        </p>
+
+        <h3>Сторонние сервисы</h3>
+        <p>
+          Отдельные функции работают на внешних сервисах со своими правилами обработки данных:
+        </p>
+        <ul>
+          <li>
+            <strong>Яндекс Карты</strong> — карта на странице контактов. Загружается
+            только после нажатия кнопки «Показать карту»: до этого запросы к Яндексу
+            не отправляются.
+          </li>
+          <li>
+            <strong>Telegram</strong> — приём заявок на бронь и анонсы.
+          </li>
+          <li>
+            <strong>{site.external.delivery.service}</strong> — доставка.
+          </li>
+          <li>
+            <strong>{site.external.loyalty.service}</strong> — программа лояльности.
+            Данные для карты вы вводите на стороне сервиса, а не на этом сайте.
+          </li>
+        </ul>
+        <p>
+          Переходя по ссылкам на эти сервисы, вы попадаете под действие их
+          собственных политик конфиденциальности.
+        </p>
+
+        <h3>Данные, которые вы сообщаете при бронировании</h3>
+        <p>
+          Имя, телефон, дату визита и число гостей «Дом культуры» использует
+          только для того, чтобы принять и подтвердить бронь. Эти сведения
+          не передаются третьим лицам, кроме случаев, прямо предусмотренных
+          законодательством РФ, и хранятся не дольше, чем необходимо
+          для обслуживания брони.
+        </p>
+
+        <h3>Ваши права</h3>
+        <p>
+          Вы вправе запросить сведения об обработке ваших данных, потребовать
+          их уточнения, блокировки или уничтожения, а также отозвать согласие —
+          для этого достаточно связаться с оператором по указанному телефону.
+        </p>
+      </article>
+
+      <article class="doc" id="soglasie">
+        <h2>Согласие на обработку персональных данных</h2>
+        <p>
+          Оставляя заявку на бронирование или сообщая свои данные по телефону,
+          вы даёте {OPERATOR_PLACEHOLDER} согласие на обработку персональных данных
+          в соответствии с Федеральным законом от 27.07.2006 № 152-ФЗ
+          «О персональных данных».
+        </p>
+        <p>Согласие даётся на обработку следующих данных:</p>
+        <ul>
+          <li>имя, которым вы представились;</li>
+          <li>номер телефона или имя пользователя в мессенджере;</li>
+          <li>дата, время и параметры брони.</li>
+        </ul>
+        <p>
+          Цель обработки — приём, подтверждение и обслуживание брони, а также
+          связь с вами по вопросам этой брони. Согласие действует до его отзыва
+          и может быть отозвано в любой момент обращением к оператору.
+        </p>
+      </article>
+
+      <article class="doc" id="oferta">
+        <h2>Условия бронирования</h2>
+        <p>
+          Бронь стола подтверждается администратором — заявка сама по себе
+          подтверждением не является. Приём заявок — {site.reservations.hours}.
+        </p>
+        <ul>
+          <li>
+            Условия конкретной брони — время удержания стола, необходимость
+            депозита на события с ограниченным числом мест — администратор
+            сообщает при подтверждении заявки.
+          </li>
+          <li>
+            Заведение работает по правилу {site.legal.ageDisclaimer}: администратор
+            вправе запросить документ, подтверждающий возраст, и отказать
+            в обслуживании при его отсутствии.
+          </li>
+          <li>
+            Состав блюд и наличие позиций меню могут меняться: карта сезонная,
+            отдельные позиции заканчиваются. Цены на сайте носят
+            информационный характер и не являются публичной офертой.
+          </li>
+        </ul>
+        <p class="doc__note">{site.legal.alcoholDisclaimer}</p>
+      </article>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .title {
+    margin-block: var(--space-s) var(--space-l);
+    font-size: var(--step-5);
+    text-transform: uppercase;
+  }
+
+  .toc {
+    padding: var(--space-m);
+    background: var(--c-surface);
+    border: 1px solid var(--c-line);
+    border-radius: var(--radius-l);
+    margin-block-end: var(--space-2xl);
+  }
+
+  .toc ul {
+    display: grid;
+    gap: 0.6rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .toc a {
+    color: var(--c-paper-dim);
+    text-decoration: none;
+  }
+  .toc a:hover {
+    color: var(--c-brass-bright);
+  }
+
+  .doc {
+    padding-block-end: var(--space-2xl);
+    scroll-margin-block-start: calc(var(--header-h, 72px) + var(--space-m));
+  }
+
+  .doc h2 {
+    margin-block-end: var(--space-m);
+    font-size: var(--step-3);
+    text-transform: uppercase;
+    color: var(--c-brass);
+  }
+
+  .doc h3 {
+    margin-block: var(--space-l) var(--space-2xs);
+    font-family: var(--font-text);
+    font-size: var(--step-0);
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--c-paper);
+  }
+
+  .doc p,
+  .doc li {
+    color: var(--c-paper-dim);
+  }
+
+  .doc p + p {
+    margin-block-start: var(--space-s);
+  }
+
+  .doc ul {
+    display: grid;
+    gap: 0.5rem;
+    margin-block-start: var(--space-s);
+    padding-inline-start: 1.2rem;
+  }
+
+  .doc__note {
+    margin-block-start: var(--space-l);
+    padding-block-start: var(--space-s);
+    border-block-start: 1px solid var(--c-line);
+    font-size: var(--step--1);
+    color: var(--c-fg-muted);
+  }
+</style>

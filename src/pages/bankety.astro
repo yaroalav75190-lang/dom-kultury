@@ -1,0 +1,279 @@
+---
+import { getCollection } from 'astro:content';
+import { Image } from 'astro:assets';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import MenuSection from '@/components/MenuSection.astro';
+import Button from '@/components/Button.astro';
+import { site } from '@/data/site';
+import interiorTable from '@/assets/brand/interior-table.jpg';
+
+const sections = (await getCollection('menu'))
+  .filter((s) => s.data.card === 'banquet')
+  .sort((a, b) => a.data.order - b.data.order);
+
+const itemCount = sections.reduce((n, s) => n + s.data.items.length, 0);
+
+const formats = [
+  {
+    title: 'День рождения',
+    text: 'Отдельная зона или весь зал, свой сет и, если нужно, программа — от диджея до живой музыки.',
+  },
+  {
+    title: 'Корпоратив',
+    text: 'Фуршет или посадка, готовая площадка под выступления и награждения.',
+  },
+  {
+    title: 'Закрытый ужин',
+    text: 'Гастрономический вечер на несколько перемен для небольшой компании.',
+  },
+  {
+    title: 'Съёмка',
+    text: 'Расписанные стены, живые растения и мягкий свет — интерьер работает как декорация.',
+  },
+];
+
+const breadcrumbs = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Главная', item: `${site.url}/` },
+    { '@type': 'ListItem', position: 2, name: 'Банкеты' },
+  ],
+};
+
+const menuSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Menu',
+  '@id': `${site.url}/bankety/#menu`,
+  url: `${site.url}/bankety/`,
+  name: `Банкетное меню — ${site.name}`,
+  inLanguage: 'ru',
+  provider: { '@id': `${site.url}/#business` },
+  hasMenuSection: sections.map((s) => ({
+    '@type': 'MenuSection',
+    name: s.data.title,
+    hasMenuItem: s.data.items.map((i) => ({
+      '@type': 'MenuItem',
+      name: i.name,
+      ...(i.description ? { description: i.description } : {}),
+      ...(i.price ? { offers: { '@type': 'Offer', price: i.price, priceCurrency: 'RUB' } } : {}),
+    })),
+  })),
+};
+---
+
+<BaseLayout
+  title="Банкеты и мероприятия"
+  description={`Банкетное и фуршетное меню «${site.name}» — ${itemCount} позиций с составами и ценами. Дни рождения, корпоративы, закрытые ужины и съёмки на Бажова, 193 в Екатеринбурге.`}
+  schema={[menuSchema, breadcrumbs]}
+>
+  <section class="section">
+    <div class="container">
+      <p class="eyebrow" data-reveal>Мероприятия</p>
+      <h1 class="title" data-reveal>Банкеты и события</h1>
+      <p class="lede" data-reveal>
+        Дом можно занять целиком или взять отдельную зону. Кухня собирает сет
+        под формат вечера, бар — карту напитков, а сцена уже на месте.
+      </p>
+
+      <div class="actions" data-reveal>
+        <Button href={site.contacts.phone.href} variant="primary" size="lg">
+          {site.contacts.phone.display}
+        </Button>
+        <Button href={site.reservations.telegram} variant="ghost" size="lg" external>
+          Обсудить в Telegram
+        </Button>
+      </div>
+    </div>
+  </section>
+
+  <section class="section formats">
+    <div class="container">
+      <h2 class="formats__title" data-reveal>Форматы</h2>
+      <ul class="formats__list" role="list">
+        {
+          formats.map((f, i) => (
+            <li class="format" data-reveal style={`--reveal-delay:${i * 70}ms`}>
+              <h3 class="format__title">{f.title}</h3>
+              <p class="format__text">{f.text}</p>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <section class="section how">
+    <div class="container how__grid">
+      <div data-reveal>
+        <h2 class="how__title">Как это устроено</h2>
+        <ol class="steps" role="list">
+          <li class="step">
+            <h3 class="step__title">Расскажите про вечер</h3>
+            <p class="step__text">
+              Дата, сколько гостей, повод и на какой бюджет ориентируетесь.
+            </p>
+          </li>
+          <li class="step">
+            <h3 class="step__title">Собираем предложение</h3>
+            <p class="step__text">
+              Площадка, сет из банкетного меню, напитки и — если нужно — программа.
+            </p>
+          </li>
+          <li class="step">
+            <h3 class="step__title">Согласуем и держим дату</h3>
+            <p class="step__text">
+              Обсуждаем состав и тайминг, фиксируем дату за вами.
+            </p>
+          </li>
+        </ol>
+      </div>
+
+      <figure class="how__figure" data-reveal>
+        <Image
+          src={interiorTable}
+          alt="Банкетная сервировка в Доме культуры: тёмные хризантемы, канапе и латунь"
+          widths={[480, 720, 960]}
+          sizes="(min-width: 60rem) 30rem, 90vw"
+          loading="lazy"
+          class="how__img"
+        />
+      </figure>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <h2 class="menu-title" data-reveal>Банкетное меню</h2>
+      <p class="menu-lede" data-reveal>
+        {itemCount} позиций фуршетного меню с составами, граммовками и ценами.
+        Сет собирается под ваш вечер — это не фиксированный список.
+      </p>
+      {sections.map((section) => <MenuSection section={section} level={3} />)}
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .title {
+    margin-block: var(--space-s) var(--space-m);
+    font-size: var(--step-6);
+    text-transform: uppercase;
+  }
+
+  .lede {
+    max-inline-size: 52ch;
+    font-size: var(--step-1);
+    color: var(--c-paper-dim);
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2xs);
+    margin-block-start: var(--space-l);
+  }
+
+  .formats {
+    padding-block-start: 0;
+  }
+
+  .formats__title,
+  .how__title,
+  .menu-title {
+    font-size: var(--step-4);
+    text-transform: uppercase;
+  }
+
+  .formats__list {
+    display: grid;
+    gap: var(--space-s);
+    grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr));
+    margin: var(--space-l) 0 0;
+  }
+
+  .format {
+    padding: var(--space-m);
+    background: var(--c-surface);
+    border: 1px solid var(--c-line);
+    border-radius: var(--radius-l);
+  }
+
+  .format__title {
+    font-size: var(--step-1);
+    text-transform: uppercase;
+    color: var(--c-brass);
+  }
+
+  .format__text {
+    margin-block-start: var(--space-2xs);
+    font-size: var(--step--1);
+    color: var(--c-paper-dim);
+  }
+
+  .how__grid {
+    display: grid;
+    gap: var(--space-xl);
+    align-items: center;
+  }
+
+  @media (min-width: 60rem) {
+    .how__grid {
+      grid-template-columns: 1fr 30rem;
+      gap: var(--space-2xl);
+    }
+  }
+
+  .steps {
+    display: grid;
+    gap: var(--space-m);
+    margin: var(--space-l) 0 0;
+    padding: 0;
+    counter-reset: step;
+    list-style: none;
+  }
+
+  .step {
+    padding-inline-start: 3rem;
+    position: relative;
+    counter-increment: step;
+  }
+
+  .step::before {
+    content: counter(step, decimal-leading-zero);
+    position: absolute;
+    inset-inline-start: 0;
+    inset-block-start: 0.1em;
+    font-family: var(--font-display);
+    font-size: var(--step-1);
+    font-weight: 200;
+    color: var(--c-brass);
+  }
+
+  .step__title {
+    font-size: var(--step-1);
+    text-transform: uppercase;
+  }
+
+  .step__text {
+    margin-block-start: 0.25em;
+    max-inline-size: 46ch;
+    color: var(--c-paper-dim);
+  }
+
+  .how__figure {
+    margin: 0;
+  }
+
+  .how__img {
+    inline-size: 100%;
+    border-radius: var(--radius-l);
+    border: 1px solid var(--c-line);
+  }
+
+  .menu-lede {
+    max-inline-size: 52ch;
+    margin-block-start: var(--space-s);
+    color: var(--c-paper-dim);
+  }
+</style>

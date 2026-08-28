@@ -1,0 +1,544 @@
+---
+import Logo from '@/components/Logo.astro';
+import Button from '@/components/Button.astro';
+import OpenStatus from '@/components/OpenStatus.astro';
+import { primaryNav, isActive } from '@/lib/nav';
+import { site } from '@/data/site';
+import { withBase, stripBase } from '@/lib/url';
+
+interface Props {
+  transparent?: boolean;
+}
+const { transparent = false } = Astro.props;
+const path = stripBase(Astro.url.pathname);
+---
+
+<header
+  class:list={['header', transparent && 'header--transparent']}
+  data-site-header
+>
+  <div class="header__inner container">
+    <a class="header__brand" href={withBase("/")} aria-label={`${site.name} — на главную`}>
+      <Logo />
+    </a>
+
+    <nav class="header__nav" aria-label="Основная навигация">
+      <ul class="header__list" role="list">
+        {
+          primaryNav.map((item) => (
+            <li>
+              <a
+                class="header__link"
+                href={withBase(item.href)}
+                aria-current={isActive(item.href, path) ? 'page' : undefined}
+              >
+                {item.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+
+    <div class="header__actions">
+      <OpenStatus class="header__status" />
+      <a class="header__phone" href={site.contacts.phone.href}>
+        {site.contacts.phone.display}
+      </a>
+      <Button href={site.reservations.telegram} variant="primary" size="sm" external>
+        Забронировать
+      </Button>
+    </div>
+
+    <button
+      class="header__burger"
+      type="button"
+      aria-expanded="false"
+      aria-controls="mobile-nav"
+      data-menu-toggle
+    >
+      <span class="header__burger-box" aria-hidden="true">
+        <span class="header__burger-line"></span>
+        <span class="header__burger-line"></span>
+      </span>
+      <span class="visually-hidden">Открыть меню</span>
+    </button>
+  </div>
+</header>
+
+{/* Мобильное меню живёт вне шапки: её фиксация ограничивала бы панель
+    в размерах. Закрывается по Esc, по клику вне и по переходу по ссылке.
+    Комментарий именно в фигурных скобках — разметочный <!-- --> Astro
+    отдал бы в браузер вместе со страницей. */}
+<div class="mobile-nav" id="mobile-nav" data-mobile-nav hidden>
+  <div class="mobile-nav__panel" role="dialog" aria-modal="true" aria-label="Меню сайта">
+    {/* Кнопка закрытия живёт внутри диалога намеренно: aria-modal="true"
+        прячет от скринридера всё за его пределами, включая бургер.
+        Без неё выйти из меню можно было бы только клавишей Esc. */}
+    <button class="mobile-nav__close" type="button" data-menu-close>
+      <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+        <path
+          d="M4 4 L16 16 M16 4 L4 16"
+          stroke="currentColor"
+          stroke-width="1.5"
+          stroke-linecap="square"
+        />
+      </svg>
+      <span class="visually-hidden">Закрыть меню</span>
+    </button>
+
+    <nav class="mobile-nav__nav">
+      <ul class="mobile-nav__list" role="list">
+        {
+          primaryNav.map((item, i) => (
+            <li style={`--i:${i}`}>
+              <a
+                class="mobile-nav__link"
+                href={withBase(item.href)}
+                aria-current={isActive(item.href, path) ? 'page' : undefined}
+              >
+                <span class="mobile-nav__label">{item.label}</span>
+                {item.description && (
+                  <span class="mobile-nav__descr">{item.description}</span>
+                )}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+
+    <div class="mobile-nav__footer">
+      <OpenStatus />
+      <a class="mobile-nav__phone" href={site.contacts.phone.href}>
+        {site.contacts.phone.display}
+      </a>
+      <div class="mobile-nav__buttons">
+        <Button href={site.reservations.telegram} variant="primary" size="md" external wide>
+          Забронировать стол
+        </Button>
+        <Button href={site.external.delivery.href} variant="ghost" size="md" external wide>
+          Доставка
+        </Button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const toggle = document.querySelector<HTMLButtonElement>('[data-menu-toggle]');
+  const panel = document.querySelector<HTMLElement>('[data-mobile-nav]');
+
+  if (toggle && panel) {
+    const FOCUSABLE = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    let lastFocused: HTMLElement | null = null;
+    let closeTimer: number | undefined;
+    let onTransitionEnd: (() => void) | undefined;
+
+    const setOpen = (open: boolean) => {
+      // Быстрое повторное открытие не должно наткнуться на отложенное
+      // закрытие: иначе панель прячется уже после того, как её открыли,
+      // и страница остаётся заблокированной.
+      if (closeTimer !== undefined) {
+        clearTimeout(closeTimer);
+        closeTimer = undefined;
+      }
+      if (onTransitionEnd) {
+        panel.removeEventListener('transitionend', onTransitionEnd);
+        onTransitionEnd = undefined;
+      }
+
+      toggle.setAttribute('aria-expanded', String(open));
+      toggle.querySelector('.visually-hidden')!.textContent = open
+        ? 'Закрыть меню'
+        : 'Открыть меню';
+      document.documentElement.classList.toggle('is-nav-open', open);
+
+      if (open) {
+        lastFocused = document.activeElement as HTMLElement;
+        panel.hidden = false;
+        // Кадр на применение стилей, иначе переход не проигрывается.
+        requestAnimationFrame(() => panel.classList.add('is-open'));
+        panel.querySelector<HTMLElement>(FOCUSABLE)?.focus();
+      } else {
+        panel.classList.remove('is-open');
+        const finish = () => {
+          panel.hidden = true;
+          if (onTransitionEnd) panel.removeEventListener('transitionend', onTransitionEnd);
+          onTransitionEnd = undefined;
+          closeTimer = undefined;
+        };
+        onTransitionEnd = finish;
+        // Если анимации отключены, transitionend не придёт — страхуемся таймером.
+        panel.addEventListener('transitionend', finish);
+        closeTimer = window.setTimeout(finish, 400);
+        lastFocused?.focus();
+      }
+    };
+
+    toggle.addEventListener('click', () => {
+      setOpen(toggle.getAttribute('aria-expanded') !== 'true');
+    });
+
+    panel.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('[data-menu-close]')) {
+        setOpen(false);
+        return;
+      }
+      // Переход по ссылке закрывает меню — иначе на якорях оно осталось бы висеть.
+      if (target.closest('a')) {
+        setOpen(false);
+        return;
+      }
+      // Клик по затемнению вне панели — привычный способ закрыть.
+      if (!target.closest('.mobile-nav__panel')) setOpen(false);
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (panel.hidden) return;
+
+      if (e.key === 'Escape') {
+        setOpen(false);
+        return;
+      }
+
+      // Удерживаем фокус внутри открытого меню.
+      if (e.key === 'Tab') {
+        const items = [...panel.querySelectorAll<HTMLElement>(FOCUSABLE)];
+        if (!items.length) return;
+        const first = items[0];
+        const last = items[items.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    });
+
+    // Возврат на десктопную ширину при открытом меню не должен
+    // оставлять страницу заблокированной.
+    const wide = window.matchMedia('(min-width: 60rem)');
+    wide.addEventListener('change', (e) => {
+      if (e.matches && toggle.getAttribute('aria-expanded') === 'true') setOpen(false);
+    });
+  }
+
+  // Шапка уезжает при прокрутке вниз и возвращается при прокрутке вверх:
+  // на телефоне это отдаёт афише почти весь экран.
+  const header = document.querySelector<HTMLElement>('[data-site-header]');
+  if (header) {
+    let last = window.scrollY;
+    let ticking = false;
+
+    const update = () => {
+      const y = window.scrollY;
+      header.classList.toggle('is-stuck', y > 24);
+      const goingDown = y > last && y > 240;
+      if (!document.documentElement.classList.contains('is-nav-open')) {
+        header.classList.toggle('is-hidden', goingDown);
+        // Липкие панели ниже по странице ориентируются на этот класс.
+        document.documentElement.classList.toggle('is-header-hidden', goingDown);
+      }
+      last = y;
+      ticking = false;
+    };
+
+    window.addEventListener(
+      'scroll',
+      () => {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(update);
+      },
+      { passive: true },
+    );
+    update();
+  }
+</script>
+
+<style>
+  .header {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: var(--z-header);
+    background: color-mix(in oklab, var(--c-ink) 82%, transparent);
+    backdrop-filter: blur(14px) saturate(140%);
+    border-block-end: 1px solid transparent;
+    transition:
+      transform var(--dur-base) var(--ease-out),
+      background-color var(--dur-base) var(--ease-out),
+      border-color var(--dur-base) var(--ease-out);
+  }
+
+  .header.is-stuck {
+    border-block-end-color: var(--c-line);
+  }
+
+  .header.is-hidden {
+    transform: translateY(-100%);
+  }
+
+  /* Прозрачная шапка на страницах с полноэкранной обложкой. */
+  .header--transparent:not(.is-stuck) {
+    background: transparent;
+    backdrop-filter: none;
+  }
+
+  .header__inner {
+    display: flex;
+    align-items: center;
+    gap: var(--space-m);
+    min-block-size: 72px;
+  }
+
+  .header__brand {
+    text-decoration: none;
+    font-size: 1rem;
+    flex: none;
+  }
+  .header__brand:hover {
+    color: inherit;
+  }
+
+  .header__nav {
+    margin-inline: auto;
+  }
+
+  .header__list {
+    display: flex;
+    align-items: center;
+    gap: clamp(var(--space-s), 1.6vw, var(--space-l));
+    margin: 0;
+  }
+
+  .header__link {
+    position: relative;
+    display: inline-block;
+    padding-block: 0.55rem;
+    font-family: var(--font-display);
+    font-size: var(--step--1);
+    font-weight: 300;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: var(--c-paper-dim);
+  }
+
+  .header__link::after {
+    content: '';
+    position: absolute;
+    inset-block-end: 0.15rem;
+    inset-inline: 0;
+    block-size: 1px;
+    background: var(--c-brass);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform var(--dur-base) var(--ease-out);
+  }
+
+  .header__link:hover,
+  .header__link[aria-current='page'] {
+    color: var(--c-paper);
+  }
+  .header__link:hover::after,
+  .header__link[aria-current='page']::after {
+    transform: scaleX(1);
+  }
+
+  .header__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-s);
+    flex: none;
+  }
+
+  .header__phone {
+    font-family: var(--font-display);
+    font-size: var(--step--1);
+    font-weight: 300;
+    letter-spacing: 0.04em;
+    text-decoration: none;
+    color: var(--c-paper-dim);
+    white-space: nowrap;
+  }
+
+  .header__burger {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    inline-size: 44px;
+    block-size: 44px;
+    margin-inline-start: auto;
+    background: none;
+    border: 0;
+    color: var(--c-paper);
+    cursor: pointer;
+  }
+
+  .header__burger-box {
+    display: grid;
+    gap: 6px;
+    inline-size: 22px;
+  }
+
+  .header__burger-line {
+    block-size: 1.5px;
+    background: currentColor;
+    transition: transform var(--dur-base) var(--ease-out);
+  }
+
+  .header__burger[aria-expanded='true'] .header__burger-line:first-child {
+    transform: translateY(3.75px) rotate(45deg);
+  }
+  .header__burger[aria-expanded='true'] .header__burger-line:last-child {
+    transform: translateY(-3.75px) rotate(-45deg);
+  }
+
+  /* --- Мобильная раскладка --- */
+  @media (max-width: 74rem) {
+    .header__status,
+    .header__phone {
+      display: none;
+    }
+  }
+
+  @media (max-width: 60rem) {
+    .header__nav,
+    .header__actions {
+      display: none;
+    }
+    .header__burger {
+      display: flex;
+    }
+  }
+
+  /* --- Мобильное меню --- */
+  .mobile-nav {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-overlay);
+    background: color-mix(in oklab, var(--c-void) 72%, transparent);
+    backdrop-filter: blur(6px);
+    opacity: 0;
+    transition: opacity var(--dur-base) var(--ease-out);
+  }
+  .mobile-nav.is-open {
+    opacity: 1;
+  }
+
+  .mobile-nav__panel {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 0;
+    inline-size: min(26rem, 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: var(--space-l);
+    padding: calc(72px + var(--space-l)) var(--gutter) var(--space-l);
+    background: var(--c-surface);
+    border-inline-start: 1px solid var(--c-line);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    transform: translateX(100%);
+    transition: transform var(--dur-base) var(--ease-out);
+  }
+  .mobile-nav.is-open .mobile-nav__panel {
+    transform: none;
+  }
+
+  .mobile-nav__close {
+    position: absolute;
+    inset-block-start: var(--space-m);
+    inset-inline-end: var(--gutter);
+    display: grid;
+    place-items: center;
+    inline-size: 44px;
+    block-size: 44px;
+    background: none;
+    border: 0;
+    color: var(--c-paper-dim);
+    cursor: pointer;
+  }
+  .mobile-nav__close:hover {
+    color: var(--c-brass);
+  }
+  .mobile-nav__close svg {
+    inline-size: 20px;
+  }
+
+  .mobile-nav__list {
+    display: grid;
+    gap: var(--space-2xs);
+    margin: 0;
+  }
+
+  .mobile-nav__link {
+    display: block;
+    padding-block: var(--space-xs);
+    border-block-end: 1px solid var(--c-line);
+    text-decoration: none;
+  }
+
+  .mobile-nav__label {
+    display: block;
+    font-family: var(--font-display);
+    font-size: var(--step-2);
+    font-weight: 300;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--c-paper);
+  }
+
+  .mobile-nav__link[aria-current='page'] .mobile-nav__label {
+    color: var(--c-brass);
+  }
+
+  .mobile-nav__descr {
+    display: block;
+    margin-block-start: 0.2em;
+    font-size: var(--step--1);
+    color: var(--c-fg-muted);
+  }
+
+  .mobile-nav__footer {
+    display: grid;
+    gap: var(--space-s);
+  }
+
+  .mobile-nav__phone {
+    font-family: var(--font-display);
+    font-size: var(--step-1);
+    font-weight: 300;
+    text-decoration: none;
+    color: var(--c-paper);
+  }
+
+  .mobile-nav__buttons {
+    display: grid;
+    gap: var(--space-2xs);
+  }
+</style>
+
+<style is:global>
+  /* Блокировка прокрутки под открытым меню. */
+  html.is-nav-open,
+  html.is-nav-open body {
+    overflow: hidden;
+  }
+
+  /* Затемнение мобильного меню лежит выше липкой шапки и накрывало бы
+     кнопку-бургер: меню нельзя было бы закрыть ни мышью, ни пальцем.
+     На время открытия поднимаем шапку над затемнением. */
+  html.is-nav-open .header {
+    z-index: var(--z-modal);
+  }
+
+  html.is-header-hidden {
+    --header-offset: 0px;
+  }
+</style>

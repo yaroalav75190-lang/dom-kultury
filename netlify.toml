@@ -1,0 +1,20 @@
+# Публикация на Netlify. Для Cloudflare Pages достаточно public/_headers
+# и public/_redirects — они попадают в dist как есть.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Каждый пул-реквест собирается и проверяется теми же тестами,
+# что и локально: контраст палитры, сборка, проверки собранного сайта.
+[context.deploy-preview]
+  command = "npm test"
+
+[[redirects]]
+  from = "https://www.d-k.bar/*"
+  to = "https://d-k.bar/:splat"
+  status = 301
+  force = true

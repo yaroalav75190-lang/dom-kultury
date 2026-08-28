@@ -1,0 +1,458 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import EventCard from '@/components/EventCard.astro';
+import Button from '@/components/Button.astro';
+import { site } from '@/data/site';
+import { eventIsUpcoming, monthKey, monthTitle, plural, isoDate } from '@/lib/datetime';
+
+const all = (await getCollection('events', ({ data }) => !data.draft)).sort((a, b) => {
+  // События без даты уходят в конец: анонс без числа не должен
+  // оттеснять то, что случится на этой неделе.
+  if (!a.data.startsAt) return 1;
+  if (!b.data.startsAt) return -1;
+  return a.data.startsAt.getTime() - b.data.startsAt.getTime();
+});
+
+const upcoming = all.filter((e) => eventIsUpcoming(e.data));
+const past = all
+  .filter((e) => !eventIsUpcoming(e.data))
+  .reverse();
+
+/** Группировка предстоящих по месяцам — «Август», «Сентябрь». */
+const groups: { key: string; title: string; items: typeof upcoming }[] = [];
+for (const event of upcoming) {
+  const key = event.data.startsAt ? monthKey(event.data.startsAt) : 'tba';
+  const title = event.data.startsAt ? monthTitle(event.data.startsAt) : 'Дата уточняется';
+  const found = groups.find((g) => g.key === key);
+  if (found) found.items.push(event);
+  else groups.push({ key, title, items: [event] });
+}
+
+/** Фильтры собираются из того, что реально есть в афише. */
+const kinds = [...new Set(upcoming.map((e) => e.data.kind))].sort();
+
+/**
+ * Список афиши.
+ *
+ * У ListItem нет свойства startDate — дата принадлежит самому событию.
+ * Поэтому каждый пункт несёт вложенный Event через `item`; события без
+ * назначенной даты остаются простой ссылкой, потому что Event без
+ * обязательного startDate был бы невалиден.
+ */
+const schema = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: `Афиша — ${site.name}`,
+    numberOfItems: upcoming.length,
+    itemListElement: upcoming.map((e, i) => {
+      const url = new URL(`/afisha/${e.id}/`, site.url).href;
+      return {
+        '@type': 'ListItem',
+        position: i + 1,
+        url,
+        ...(e.data.startsAt
+          ? {
+              item: {
+                '@type': 'Event',
+                '@id': url,
+                name: e.data.title,
+                startDate: isoDate(e.data.startsAt),
+                ...(e.data.endsAt ? { endDate: isoDate(e.data.endsAt) } : {}),
+                eventStatus: 'https://schema.org/EventScheduled',
+                eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+                location: { '@id': `${site.url}/#business` },
+              },
+            }
+          : { name: e.data.title }),
+      };
+    }),
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Главная', item: `${site.url}/` },
+      { '@type': 'ListItem', position: 2, name: 'Афиша' },
+    ],
+  },
+];
+---
+
+<BaseLayout
+  title="Афиша"
+  description={`Концерты, dj-сеты, стендап, театр и гастрономические события в баре «${site.name}» на Бажова, 193 в Екатеринбурге. Расписание на ближайшие недели.`}
+  schema={schema}
+>
+  <section class="section page-head">
+    <div class="container">
+      <p class="eyebrow" data-reveal>Афиша</p>
+      <h1 class="page-head__title" data-reveal>
+        Что происходит<br /> в Доме культуры
+      </h1>
+      <p class="page-head__lede" data-reveal>
+        Концерты, сеты, музлото, театральные постановки и гастрономические вечера.
+        Программа обновляется каждую неделю — самое свежее всегда в{' '}
+        <a href={site.channel.href} target="_blank" rel="noopener noreferrer">Telegram-канале</a>.
+      </p>
+
+      {
+        upcoming.length > 0 && (
+          <p class="page-head__count" data-reveal data-total-count>
+            {upcoming.length} {plural(upcoming.length, ['событие', 'события', 'событий'])} впереди
+          </p>
+        )
+      }
+    </div>
+  </section>
+
+  {
+    kinds.length > 1 && (
+      <div class="container">
+        {/* Фильтр — прогрессивное улучшение: без JS блок скрыт,
+            а все события и так видны списком ниже. */}
+        <div class="filters" data-filters hidden>
+          <span class="filters__label" id="filters-label">
+            Показать:
+          </span>
+          <div class="filters__row" role="group" aria-labelledby="filters-label">
+            <button class="chip is-active" type="button" data-filter="all" aria-pressed="true">
+              Все
+            </button>
+            {kinds.map((kind) => (
+              <button class="chip" type="button" data-filter={kind} aria-pressed="false">
+                {kind}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  {
+    upcoming.length === 0 && (
+      <section class="section">
+        <div class="container">
+          <div class="empty">
+            <h2 class="empty__title">Афиша готовится</h2>
+            <p class="empty__text">
+              Ближайшие события ещё не опубликованы. Программу объявляем
+              в Telegram-канале — подпишитесь, чтобы не пропустить.
+            </p>
+            <div class="empty__actions">
+              <Button href={site.channel.href} variant="primary" size="lg" external>
+                Канал с анонсами
+              </Button>
+              <Button href={site.contacts.phone.href} variant="ghost" size="lg">
+                {site.contacts.phone.display}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  {
+    groups.map((group, gi) => (
+      <section class="section section--tight">
+        <div class="container">
+          <h2 class="month" data-reveal>
+            <span class="month__name">{group.title}</span>
+            <span class="month__rule" aria-hidden="true" />
+            <span class="month__count" data-month-count>
+              {group.items.length} {plural(group.items.length, ['событие', 'события', 'событий'])}
+            </span>
+          </h2>
+
+          <ul class="grid" role="list" data-event-grid>
+            {group.items.map((event, i) => (
+              <li data-kind={event.data.kind}>
+                <EventCard event={event} eager={gi === 0 && i < 3} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+    ))
+  }
+
+  {
+    past.length > 0 && (
+      <section class="section">
+        <div class="container">
+          <details class="archive">
+            <summary class="archive__summary">
+              <span>Прошедшие события</span>
+              <span class="archive__count">{past.length}</span>
+            </summary>
+            <ul class="grid grid--dim" role="list" data-event-grid>
+              {past.map((event) => (
+                <li data-kind={event.data.kind}>
+                  <EventCard event={event} />
+                </li>
+              ))}
+            </ul>
+          </details>
+        </div>
+      </section>
+    )
+  }
+</BaseLayout>
+
+<script>
+  // Фильтр по типу события. Показываем блок только когда скрипт ожил.
+  const wrap = document.querySelector<HTMLElement>('[data-filters]');
+  if (wrap) {
+    wrap.hidden = false;
+    const chips = [...wrap.querySelectorAll<HTMLButtonElement>('[data-filter]')];
+    const grids = [...document.querySelectorAll<HTMLElement>('[data-event-grid]')];
+
+    chips.forEach((chip) => {
+      chip.addEventListener('click', () => {
+        const value = chip.dataset.filter ?? 'all';
+
+        chips.forEach((c) => {
+          const active = c === chip;
+          c.classList.toggle('is-active', active);
+          c.setAttribute('aria-pressed', String(active));
+        });
+
+        // Склонение числа событий — то же правило, что и на сборке.
+        const plural = (n: number) => {
+          const abs = Math.abs(n) % 100;
+          const tail = abs % 10;
+          if (abs > 10 && abs < 20) return 'событий';
+          if (tail > 1 && tail < 5) return 'события';
+          if (tail === 1) return 'событие';
+          return 'событий';
+        };
+
+        let totalShown = 0;
+
+        for (const grid of grids) {
+          let shown = 0;
+          for (const item of grid.children) {
+            const el = item as HTMLElement;
+            const match = value === 'all' || el.dataset.kind === value;
+            el.hidden = !match;
+            if (match) shown++;
+          }
+
+          const section = grid.closest('section');
+          const isArchive = grid.classList.contains('grid--dim');
+
+          // Счётчик месяца обязан соответствовать тому, что видно:
+          // «Август · 6 событий» над одной карточкой сбивает с толку.
+          const count = section?.querySelector('[data-month-count]');
+          if (count) count.textContent = `${shown} ${plural(shown)}`;
+
+          // Пустая секция схлопывается вместе с заголовком.
+          if (section) section.hidden = shown === 0;
+          if (!isArchive) totalShown += shown;
+        }
+
+        const total = document.querySelector('[data-total-count]');
+        if (total) total.textContent = `${totalShown} ${plural(totalShown)} впереди`;
+      });
+    });
+  }
+</script>
+
+<style>
+  .page-head__title {
+    margin-block-start: var(--space-s);
+    font-size: var(--step-6);
+    text-transform: uppercase;
+  }
+
+  .page-head__lede {
+    max-inline-size: 46ch;
+    margin-block-start: var(--space-m);
+    font-size: var(--step-1);
+    color: var(--c-paper-dim);
+  }
+
+  .page-head__count {
+    margin-block-start: var(--space-m);
+    font-family: var(--font-display);
+    font-size: var(--step--1);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--c-brass);
+  }
+
+  .section--tight {
+    padding-block: var(--space-l);
+  }
+
+  /* --- Фильтры --- */
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-s);
+    padding-block: var(--space-s);
+    border-block: 1px solid var(--c-line);
+  }
+
+  .filters__label {
+    font-size: var(--step--2);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--c-fg-muted);
+  }
+
+  .filters__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2xs);
+  }
+
+  .chip {
+    min-block-size: 40px;
+    padding-inline: var(--space-s);
+    background: transparent;
+    color: var(--c-paper-dim);
+    border: 1px solid var(--c-line-strong);
+    border-radius: var(--radius-pill);
+    font-size: var(--step--1);
+    cursor: pointer;
+    transition:
+      background-color var(--dur-fast) var(--ease-out),
+      color var(--dur-fast) var(--ease-out),
+      border-color var(--dur-fast) var(--ease-out);
+  }
+
+  .chip:hover {
+    border-color: var(--c-brass-dim);
+    color: var(--c-paper);
+  }
+
+  .chip.is-active {
+    background: var(--c-brass);
+    border-color: var(--c-brass);
+    color: var(--c-ink);
+  }
+
+  /* --- Месяц --- */
+  .month {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-s);
+    margin-block-end: var(--space-m);
+    font-size: var(--step-3);
+    text-transform: uppercase;
+  }
+
+  .month__rule {
+    flex: 1;
+    block-size: 1px;
+    background: var(--c-line);
+  }
+
+  .month__count {
+    font-family: var(--font-text);
+    font-size: var(--step--1);
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--c-fg-muted);
+    white-space: nowrap;
+  }
+
+  /* --- Сетка --- */
+  .grid {
+    display: grid;
+    gap: var(--space-m);
+    grid-template-columns: repeat(auto-fill, minmax(min(17rem, 100%), 1fr));
+    margin: 0;
+  }
+
+  .grid--dim {
+    opacity: 0.62;
+    transition: opacity var(--dur-base) var(--ease-out);
+  }
+  .grid--dim:hover {
+    opacity: 1;
+  }
+
+  /* --- Пустое состояние --- */
+  .empty {
+    max-inline-size: 44rem;
+    padding: var(--space-xl);
+    background: var(--c-surface);
+    border: 1px solid var(--c-line);
+    border-radius: var(--radius-l);
+    text-align: center;
+    margin-inline: auto;
+  }
+
+  .empty__title {
+    font-size: var(--step-3);
+    text-transform: uppercase;
+  }
+
+  .empty__text {
+    max-inline-size: 44ch;
+    margin: var(--space-s) auto 0;
+    color: var(--c-paper-dim);
+  }
+
+  .empty__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-2xs);
+    margin-block-start: var(--space-l);
+  }
+
+  /* --- Архив --- */
+  .archive {
+    border-block-start: 1px solid var(--c-line);
+    padding-block-start: var(--space-m);
+  }
+
+  .archive__summary {
+    display: flex;
+    align-items: center;
+    gap: var(--space-s);
+    min-block-size: 44px;
+    font-family: var(--font-display);
+    font-size: var(--step-1);
+    font-weight: 300;
+    text-transform: uppercase;
+    color: var(--c-paper-dim);
+    cursor: pointer;
+    list-style: none;
+  }
+  .archive__summary::-webkit-details-marker {
+    display: none;
+  }
+  .archive__summary::after {
+    content: '';
+    inline-size: 0.5em;
+    block-size: 0.5em;
+    border-inline-end: 1px solid currentColor;
+    border-block-end: 1px solid currentColor;
+    transform: rotate(45deg) translateY(-0.15em);
+    transition: transform var(--dur-base) var(--ease-out);
+  }
+  .archive[open] .archive__summary::after {
+    transform: rotate(-135deg) translateY(-0.15em);
+  }
+  .archive__summary:hover {
+    color: var(--c-brass);
+  }
+
+  .archive__count {
+    font-family: var(--font-text);
+    font-size: var(--step--1);
+    color: var(--c-fg-muted);
+  }
+
+  .archive[open] .grid {
+    margin-block-start: var(--space-m);
+  }
+</style>

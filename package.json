@@ -1,0 +1,29 @@
+{
+  "name": "dom-kultury",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Дом культуры — бар и площадка событий в Екатеринбурге",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "node scripts/generate-og.mjs && astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "sync": "astro sync",
+    "assets": "node scripts/generate-og.mjs",
+    "verify": "node scripts/verify.mjs",
+    "contrast": "node scripts/contrast.mjs",
+    "test": "node scripts/contrast.mjs && astro build && node scripts/verify.mjs",
+    "preview:pages": "astro build && node scripts/make-preview.mjs"
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "^3.7.0",
+    "astro": "^7.2.9",
+    "sharp": "^0.34.4"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "typescript": "^6.0.3"
+  }
+}

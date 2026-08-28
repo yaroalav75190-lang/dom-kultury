@@ -1,0 +1,11 @@
+# В репозитории всегда LF: проект собирается и на Windows, и на Linux в CI,
+# иначе каждый файл при переносе показывался бы изменённым целиком.
+* text=auto eol=lf
+
+# Бинарные файлы не трогать.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.woff2 binary
+*.ico binary

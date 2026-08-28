@@ -1,0 +1,110 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Button from '@/components/Button.astro';
+import EventCard from '@/components/EventCard.astro';
+import { site } from '@/data/site';
+import { eventIsUpcoming } from '@/lib/datetime';
+import { withBase } from '@/lib/url';
+
+/**
+ * Страница 404 не должна быть тупиком. Показываем ближайшие события —
+ * ради них сюда чаще всего и приходят, а ссылка могла устареть именно
+ * потому, что событие прошло.
+ */
+const nextUp = (await getCollection('events', ({ data }) => !data.draft))
+  .filter((e) => eventIsUpcoming(e.data))
+  .sort((a, b) => {
+    if (!a.data.startsAt) return 1;
+    if (!b.data.startsAt) return -1;
+    return a.data.startsAt.getTime() - b.data.startsAt.getTime();
+  })
+  .slice(0, 3);
+---
+
+<BaseLayout
+  title="Страница не найдена"
+  description="Такой страницы на сайте Дома культуры нет — возможно, событие уже прошло. Загляните в афишу, меню или контакты."
+  noindex
+>
+  <section class="section">
+    <div class="container">
+      <p class="eyebrow">404</p>
+      <h1 class="title">Такой страницы нет</h1>
+      <p class="lede">
+        Возможно, событие уже прошло или ссылку набрали с ошибкой.
+        Вот что есть точно:
+      </p>
+
+      <div class="actions">
+        <Button href={withBase("/afisha")} variant="primary" size="lg">Афиша</Button>
+        <Button href={withBase("/menu")} variant="ghost" size="lg">Меню</Button>
+        <Button href={withBase("/kontakty")} variant="ghost" size="lg">Контакты</Button>
+      </div>
+    </div>
+  </section>
+
+  {
+    nextUp.length > 0 && (
+      <section class="section">
+        <div class="container">
+          <h2 class="sub">Ближайшие события</h2>
+          <ul class="cards" role="list">
+            {nextUp.map((event) => (
+              <li>
+                <EventCard event={event} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+    )
+  }
+
+  <section class="section">
+    <div class="container">
+      <p class="help">
+        Не нашли нужное — позвоните:{' '}
+        <a href={site.contacts.phone.href}>{site.contacts.phone.display}</a>
+      </p>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .title {
+    margin-block: var(--space-s) var(--space-m);
+    font-size: var(--step-6);
+    text-transform: uppercase;
+  }
+
+  .lede {
+    max-inline-size: 44ch;
+    font-size: var(--step-1);
+    color: var(--c-paper-dim);
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2xs);
+    margin-block-start: var(--space-l);
+  }
+
+  .sub {
+    margin-block-end: var(--space-m);
+    font-size: var(--step-3);
+    text-transform: uppercase;
+  }
+
+  .cards {
+    display: grid;
+    gap: var(--space-m);
+    grid-template-columns: repeat(auto-fit, minmax(min(17rem, 100%), 1fr));
+    margin: 0;
+  }
+
+  .help {
+    color: var(--c-fg-muted);
+  }
+</style>

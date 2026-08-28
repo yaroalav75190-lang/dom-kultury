@@ -1,0 +1,303 @@
+---
+import { Image } from 'astro:assets';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Button from '@/components/Button.astro';
+import Marquee from '@/components/Marquee.astro';
+import { site } from '@/data/site';
+
+import interiorHall from '@/assets/brand/interior-hall.png';
+import interiorTable from '@/assets/brand/interior-table.jpg';
+import logoSign from '@/assets/brand/logo-sign.png';
+import { withBase } from '@/lib/url';
+
+const spaces = [
+  {
+    title: 'Основной зал',
+    text: 'Концерты, квартирники, постановки и перформансы, ночная программа с диджеями.',
+    image: interiorHall,
+    alt: 'Основной зал: расписанная стена, живые растения, мягкие кресла в тёплом свете',
+  },
+  {
+    title: 'Летняя веранда',
+    text: 'Открытая площадка тёплого сезона: сеты до рассвета, длинные ужины, разговоры на воздухе.',
+    image: interiorTable,
+    alt: 'Стол на летней веранде: тёмные цветы, латунь и стекло вечером',
+  },
+];
+
+const ticker = [
+  'концерты',
+  'квартирники',
+  'постановки',
+  'иммерсивный театр',
+  'музыкальное лото',
+  'dj-сеты',
+  'стендап',
+  'гастроужины',
+  'мастер-классы',
+];
+
+const breadcrumbs = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Главная', item: `${site.url}/` },
+    { '@type': 'ListItem', position: 2, name: 'О доме' },
+  ],
+};
+---
+
+<BaseLayout
+  title="О доме"
+  description={`Что такое «${site.name}»: бар со сценой на Бажова, 193 в Екатеринбурге. Основной зал и летняя веранда, концерты и постановки, кухня и авторский бар.`}
+  schema={[breadcrumbs]}
+>
+  <section class="section">
+    <div class="container">
+      <p class="eyebrow" data-reveal>О доме</p>
+      <h1 class="title" data-reveal>{site.positioning}</h1>
+      <p class="lede" data-reveal>
+        Дом культуры — бар, у которого есть сцена. Название взято всерьёз:
+        сюда приходят не за столиком, а за вечером. В один день здесь квартирник,
+        в другой — постановка, в третий — музыкальное лото или ужин
+        на несколько перемен.
+      </p>
+    </div>
+  </section>
+
+  <figure class="banner">
+    <Image
+      src={logoSign}
+      alt="Латунная вывеска «Дом культуры» на фоне зелени"
+      widths={[720, 1200, 1600]}
+      sizes="100vw"
+      loading="lazy"
+      class="banner__img"
+    />
+  </figure>
+
+  <Marquee items={ticker} duration={38} />
+
+  <section class="section">
+    <div class="container prose-block" data-reveal>
+      <h2 class="h2">Как здесь всё устроено</h2>
+      <p>
+        Программа обновляется каждую неделю — поэтому афиша на сайте живая,
+        а анонсы выходят в Telegram-канале раньше всего. На события стол лучше
+        бронировать заранее: зал не резиновый.
+      </p>
+      <p>
+        Кухня и бар работают на равных. В барной карте — авторские «культурные»
+        коктейли и большая классика, настойки, вино и всё, что нужно,
+        чтобы вечер сложился. На кухне — закуски, горячее,
+        паста и десерты, а по выходным до восьми вечера — бранчи, которые
+        собираешь сам.
+      </p>
+      <div class="prose-actions">
+        <Button href={withBase("/menu")} variant="secondary" size="md">Смотреть меню</Button>
+        <Button href={withBase("/afisha")} variant="quiet" size="md">Афиша</Button>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <h2 class="h2" data-reveal>Пространства</h2>
+      <ul class="spaces" role="list">
+        {
+          spaces.map((space, i) => (
+            <li class="space" data-reveal style={`--reveal-delay:${i * 80}ms`}>
+              <div class="space__media">
+                <Image
+                  src={space.image}
+                  alt={space.alt}
+                  widths={[480, 760, 1040]}
+                  sizes="(min-width: 60rem) 34rem, 92vw"
+                  loading="lazy"
+                  class="space__img"
+                />
+              </div>
+              <h3 class="space__title">{space.title}</h3>
+              <p class="space__text">{space.text}</p>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <h2 class="h2" data-reveal>Коротко</h2>
+      <dl class="facts">
+        <div class="fact" data-reveal>
+          <dt>Адрес</dt>
+          <dd>
+            <a href={site.contacts.maps} target="_blank" rel="noopener noreferrer">
+              {site.contacts.address.full}
+            </a>
+          </dd>
+        </div>
+        <div class="fact" data-reveal>
+          <dt>Часы</dt>
+          <dd>
+            {site.hours.map((h) => (
+              <span class="fact__line">
+                {h.label}: {h.opens} — {h.closes}
+              </span>
+            ))}
+          </dd>
+        </div>
+        <div class="fact" data-reveal>
+          <dt>Бронь</dt>
+          <dd>
+            <a href={site.contacts.phone.href}>{site.contacts.phone.display}</a>,
+            {site.reservations.hours}
+          </dd>
+        </div>
+        <div class="fact" data-reveal>
+          <dt>Возраст</dt>
+          <dd>{site.legal.ageDisclaimer}</dd>
+        </div>
+        <div class="fact" data-reveal>
+          <dt>Доставка</dt>
+          <dd>
+            <a href={site.external.delivery.href} target="_blank" rel="noopener noreferrer">
+              {site.external.delivery.service}
+            </a>
+          </dd>
+        </div>
+        <div class="fact" data-reveal>
+          <dt>Плейлист</dt>
+          <dd>
+            <a href={site.external.playlist.href} target="_blank" rel="noopener noreferrer">
+              {site.external.playlist.service}
+            </a>
+          </dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .title {
+    margin-block: var(--space-s) var(--space-m);
+    font-size: var(--step-6);
+    text-transform: uppercase;
+  }
+
+  .lede {
+    max-inline-size: 56ch;
+    font-size: var(--step-1);
+    color: var(--c-paper-dim);
+  }
+
+  .banner {
+    margin: 0;
+    max-block-size: 26rem;
+    overflow: hidden;
+  }
+
+  .banner__img {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .h2 {
+    margin-block-end: var(--space-m);
+    font-size: var(--step-4);
+    text-transform: uppercase;
+  }
+
+  .prose-block {
+    max-inline-size: var(--measure);
+  }
+
+  .prose-block p {
+    color: var(--c-paper-dim);
+  }
+  .prose-block p + p {
+    margin-block-start: var(--space-s);
+  }
+
+  .prose-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2xs);
+    margin-block-start: var(--space-l);
+  }
+
+  .spaces {
+    display: grid;
+    gap: var(--space-l);
+    grid-template-columns: repeat(auto-fit, minmax(min(20rem, 100%), 1fr));
+    margin: 0;
+  }
+
+  .space__media {
+    overflow: hidden;
+    border-radius: var(--radius-l);
+    border: 1px solid var(--c-line);
+    aspect-ratio: 4 / 3;
+    margin-block-end: var(--space-s);
+  }
+
+  .space__img {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .space__title {
+    font-size: var(--step-2);
+    text-transform: uppercase;
+  }
+
+  .space__text {
+    margin-block-start: 0.35em;
+    max-inline-size: 46ch;
+    color: var(--c-paper-dim);
+  }
+
+  .facts {
+    display: grid;
+    gap: 0;
+    margin: 0;
+    border-block-start: 1px solid var(--c-line);
+  }
+
+  .fact {
+    display: grid;
+    grid-template-columns: 10rem 1fr;
+    gap: var(--space-s);
+    padding-block: var(--space-s);
+    border-block-end: 1px solid var(--c-line);
+  }
+
+  @media (max-width: 34rem) {
+    .fact {
+      grid-template-columns: 1fr;
+      gap: 0.25rem;
+    }
+  }
+
+  .fact dt {
+    font-size: var(--step--2);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--c-brass);
+    padding-block-start: 0.25em;
+  }
+
+  .fact dd {
+    margin: 0;
+    color: var(--c-paper-dim);
+  }
+
+  .fact__line {
+    display: block;
+    font-variant-numeric: tabular-nums;
+  }
+</style>

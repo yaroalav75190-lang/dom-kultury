@@ -1,0 +1,184 @@
+---
+/**
+ * Бегущая строка — то, что происходит в Доме культуры.
+ *
+ * Лента дублируется в разметке и уезжает трансформом: это даёт
+ * бесшовный цикл без JS. При prefers-reduced-motion движение
+ * не запускается вовсе.
+ *
+ * Кнопка паузы обязательна: WCAG 2.2.2 требует способа остановить
+ * движение, которое началось само и длится дольше пяти секунд.
+ * Наведения мыши для этого недостаточно — оно недоступно с клавиатуры
+ * и с тачскрина.
+ */
+
+interface Props {
+  items: readonly string[];
+  /** Секунды на полный проход. Больше значение — медленнее. */
+  duration?: number;
+}
+
+const { items, duration = 42 } = Astro.props;
+
+/** Уникальный id: на странице может быть несколько лент. */
+const id = `marquee-${Math.abs([...items.join('')].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 7))}`;
+---
+
+<div class="marquee" data-marquee>
+  {/* role="group" — иначе aria-label на обычном div игнорируется. */}
+  <div class="marquee__viewport" role="group" aria-labelledby={`${id}-label`}>
+    <p class="visually-hidden" id={`${id}-label`}>Что происходит в Доме культуры</p>
+
+    <div class="marquee__track" style={`--duration:${duration}s`}>
+      {
+        [0, 1].map((copy) => (
+          <ul class="marquee__list" role="list" aria-hidden={copy === 1 ? 'true' : undefined}>
+            {items.map((item) => (
+              <li class="marquee__item">
+                {item}
+                <span class="marquee__sep" aria-hidden="true">
+                  ✦
+                </span>
+              </li>
+            ))}
+          </ul>
+        ))
+      }
+    </div>
+  </div>
+
+  <button class="marquee__toggle" type="button" data-marquee-toggle aria-pressed="false" hidden>
+    <span class="marquee__icon" aria-hidden="true"></span>
+    <span class="visually-hidden">Остановить бегущую строку</span>
+  </button>
+</div>
+
+<script>
+  for (const root of document.querySelectorAll<HTMLElement>('[data-marquee]')) {
+    const toggle = root.querySelector<HTMLButtonElement>('[data-marquee-toggle]');
+    if (!toggle) continue;
+
+    // Если движение и так отключено настройками системы, кнопка не нужна.
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) continue;
+
+    toggle.hidden = false;
+
+    toggle.addEventListener('click', () => {
+      const paused = root.classList.toggle('is-paused');
+      toggle.setAttribute('aria-pressed', String(paused));
+      toggle.querySelector('.visually-hidden')!.textContent = paused
+        ? 'Запустить бегущую строку'
+        : 'Остановить бегущую строку';
+    });
+  }
+</script>
+
+<style>
+  .marquee {
+    position: relative;
+    overflow: hidden;
+    padding-block: var(--space-s);
+    border-block: 1px solid var(--c-line);
+    background: var(--c-surface);
+  }
+
+  .marquee__viewport {
+    overflow: hidden;
+    /* Края растворяются, чтобы строка не обрывалась резко. */
+    mask-image: linear-gradient(to right, transparent, #000 8%, #000 88%, transparent);
+  }
+
+  .marquee__track {
+    display: flex;
+    inline-size: max-content;
+  }
+
+  .marquee__list {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+  }
+
+  .marquee__item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-m);
+    padding-inline-end: var(--space-m);
+    font-family: var(--font-display);
+    font-size: var(--step-1);
+    font-weight: 200;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--c-paper-dim);
+  }
+
+  .marquee__sep {
+    font-size: 0.5em;
+    color: var(--c-brass);
+  }
+
+  /* --- Кнопка паузы --- */
+  .marquee__toggle {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: 0;
+    inline-size: 44px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(
+      to right,
+      transparent,
+      var(--c-surface) 40%
+    );
+    border: 0;
+    color: var(--c-paper-mute);
+    cursor: pointer;
+  }
+  .marquee__toggle:hover {
+    color: var(--c-brass);
+  }
+
+  /* Две палочки — «пауза». В нажатом состоянии превращаются
+     в треугольник «играть». */
+  .marquee__icon {
+    inline-size: 10px;
+    block-size: 12px;
+    border-inline: 3px solid currentColor;
+  }
+  .marquee__toggle[aria-pressed='true'] .marquee__icon {
+    inline-size: 0;
+    block-size: 0;
+    border: 6px solid transparent;
+    border-inline-start: 10px solid currentColor;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .marquee__track {
+      animation: marquee var(--duration) linear infinite;
+    }
+    .marquee:hover .marquee__track,
+    .marquee.is-paused .marquee__track {
+      animation-play-state: paused;
+    }
+  }
+
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      /* Ровно одна копия списка — стык незаметен. */
+      transform: translateX(-50%);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .marquee__viewport {
+      overflow-x: auto;
+      mask-image: none;
+    }
+  }
+</style>

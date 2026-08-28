@@ -1,0 +1,202 @@
+---
+import { site } from '@/data/site';
+
+/**
+ * «Открыто сейчас» / «Откроется в 17:00».
+ *
+ * Сайт статический, поэтому статус нельзя посчитать на сборке — он
+ * протух бы через час. Считаем в браузере по времени Екатеринбурга,
+ * а не по часам посетителя: житель Москвы должен видеть, открыт ли
+ * бар в Екатеринбурге, а не у него дома.
+ *
+ * До выполнения скрипта показывается расписание — то есть полезный
+ * текст, а не пустое место или ложный статус.
+ */
+
+interface Props {
+  class?: string;
+}
+const { class: className } = Astro.props;
+
+const hours = site.hours.map((h) => ({
+  days: [...h.days],
+  opens: h.opens,
+  closes: h.closes,
+  overnight: h.overnight,
+}));
+
+/**
+ * Запасная подпись — то, что видят до выполнения скрипта и всегда
+ * видят без JS. Собирается из тех же данных, что и расписание:
+ * вручную написанная строка успела разойтись с ними (в ней пятница
+ * открывалась в 12:00, хотя на деле в 17:00).
+ */
+const DAY_SHORT = ['', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'];
+
+const byOpens: { opens: string; days: number[] }[] = [];
+for (const slot of site.hours) {
+  const found = byOpens.find((g) => g.opens === slot.opens);
+  if (found) found.days.push(...slot.days);
+  else byOpens.push({ opens: slot.opens, days: [...slot.days] });
+}
+
+const fallback = byOpens
+  .map(({ opens, days }) => {
+    const sorted = [...days].sort((a, b) => a - b);
+    const first = DAY_SHORT[sorted[0]!];
+    const last = DAY_SHORT[sorted[sorted.length - 1]!];
+    // Подряд идущие дни сворачиваем в диапазон: «пн–пт», а не «пн, вт, ср…».
+    const isRange = sorted.every((d, i) => i === 0 || d === sorted[i - 1]! + 1);
+    const label = sorted.length === 1 ? first : isRange ? `${first}–${last}` : sorted.map((d) => DAY_SHORT[d]).join(', ');
+    return `${label} с ${opens}`;
+  })
+  .join(', ');
+---
+
+<p class:list={['open-status', className]} data-open-status data-hours={JSON.stringify(hours)}>
+  <span class="open-status__dot" aria-hidden="true"></span>
+  <span class="open-status__text">{fallback}</span>
+</p>
+
+<script>
+  interface Slot {
+    days: number[];
+    opens: string;
+    closes: string;
+    overnight: boolean;
+  }
+
+  const TZ = 'Asia/Yekaterinburg';
+
+  function localNow(): { iso: number; minutes: number } {
+    const fmt = new Intl.DateTimeFormat('ru-RU', {
+      timeZone: TZ,
+      weekday: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+    const parts: Record<string, string> = {};
+    for (const p of fmt.formatToParts(new Date())) parts[p.type] = p.value;
+
+    const order = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'];
+    const wd = (parts.weekday ?? '').toLowerCase().replace('.', '').slice(0, 2);
+    const iso = order.indexOf(wd) + 1;
+
+    return {
+      iso: iso > 0 ? iso : 1,
+      minutes: (Number(parts.hour) % 24) * 60 + Number(parts.minute),
+    };
+  }
+
+  const toMin = (t: string) => {
+    const [h, m] = t.split(':').map(Number);
+    return h * 60 + m;
+  };
+
+  function evaluate(hours: Slot[]) {
+    const { iso, minutes } = localNow();
+
+    for (const slot of hours) {
+      const opens = toMin(slot.opens);
+      const closes = toMin(slot.closes);
+
+      if (slot.days.includes(iso)) {
+        const open = slot.overnight ? minutes >= opens : minutes >= opens && minutes < closes;
+        if (open) return { open: true, until: slot.closes };
+      }
+      // Хвост вчерашней ночной смены.
+      if (slot.overnight) {
+        const prev = iso === 1 ? 7 : iso - 1;
+        if (slot.days.includes(prev) && minutes < closes) return { open: true, until: slot.closes };
+      }
+    }
+
+    // Закрыто — ищем ближайшее открытие в пределах недели.
+    for (let ahead = 0; ahead < 8; ahead++) {
+      const day = ((iso - 1 + ahead) % 7) + 1;
+      for (const slot of hours) {
+        if (!slot.days.includes(day)) continue;
+        const opens = toMin(slot.opens);
+        if (ahead === 0 && minutes >= opens) continue;
+        return { open: false, until: slot.opens, today: ahead === 0 };
+      }
+    }
+    return { open: false, until: null, today: false };
+  }
+
+  for (const el of document.querySelectorAll<HTMLElement>('[data-open-status]')) {
+    const hours = JSON.parse(el.dataset.hours ?? '[]') as Slot[];
+    if (!hours.length) continue;
+
+    const text = el.querySelector('.open-status__text');
+    if (!text) continue;
+
+    const render = () => {
+      const state = evaluate(hours);
+      el.dataset.state = state.open ? 'open' : 'closed';
+      if (state.open) {
+        text.textContent = `Открыто до ${state.until}`;
+      } else if (state.until) {
+        // «Сегодня» и «завтра» — разные обещания, и путать их нельзя:
+        // в 15:00 бар откроется через два часа, в 03:00 — через четырнадцать.
+        text.textContent = state.today
+          ? `Закрыто · откроется сегодня в ${state.until}`
+          : `Закрыто · откроется в ${state.until}`;
+      } else {
+        text.textContent = 'Закрыто';
+      }
+    };
+
+    render();
+    // Пересчёт раз в минуту: посетитель может открыть страницу за минуту до открытия.
+    setInterval(render, 60_000);
+  }
+</script>
+
+<style>
+  .open-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55em;
+    font-size: var(--step--1);
+    color: var(--c-fg-muted);
+    white-space: nowrap;
+  }
+
+  .open-status__dot {
+    inline-size: 7px;
+    block-size: 7px;
+    border-radius: 50%;
+    background: var(--c-paper-mute);
+    flex: none;
+  }
+
+  .open-status[data-state='open'] {
+    color: var(--c-paper-dim);
+  }
+  .open-status[data-state='open'] .open-status__dot {
+    background: #4ad07a;
+    box-shadow: 0 0 0 3px rgba(74, 208, 122, 0.18);
+  }
+  .open-status[data-state='closed'] .open-status__dot {
+    background: var(--c-brass-dim);
+  }
+
+  /* Пульсация только когда открыто и только если движение разрешено. */
+  @media (prefers-reduced-motion: no-preference) {
+    .open-status[data-state='open'] .open-status__dot {
+      animation: open-pulse 2.6s var(--ease-in-out) infinite;
+    }
+  }
+
+  @keyframes open-pulse {
+    0%,
+    100% {
+      box-shadow: 0 0 0 3px rgba(74, 208, 122, 0.18);
+    }
+    50% {
+      box-shadow: 0 0 0 6px rgba(74, 208, 122, 0.05);
+    }
+  }
+</style>

@@ -1,0 +1,388 @@
+---
+import { getCollection, render } from 'astro:content';
+import { Image, getImage } from 'astro:assets';
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Button from '@/components/Button.astro';
+import EventCard from '@/components/EventCard.astro';
+import { site } from '@/data/site';
+import { formatFull, formatDayYear, formatTime, isoDate, eventIsUpcoming } from '@/lib/datetime';
+import { withBase } from '@/lib/url';
+
+export async function getStaticPaths() {
+  const events = await getCollection('events', ({ data }) => !data.draft);
+  return events.map((event) => ({ params: { id: event.id }, props: { event } }));
+}
+
+const { event } = Astro.props;
+const d = event.data;
+const { Content } = await render(event);
+
+const upcoming = eventIsUpcoming(d);
+
+/* Постер уходит в соцсети как превью — берём готовый оптимизированный файл. */
+const ogPoster = await getImage({ src: d.poster, width: 1200, height: 630, fit: 'cover', format: 'jpeg' });
+
+/* Похожие события: тот же тип, затем всё остальное впереди. */
+const all = await getCollection('events', ({ data }) => !data.draft);
+const related = all
+  .filter((e) => e.id !== event.id)
+  .filter((e) => eventIsUpcoming(e.data))
+  .sort((a, b) => {
+    const sameKind = Number(b.data.kind === d.kind) - Number(a.data.kind === d.kind);
+    if (sameKind !== 0) return sameKind;
+    if (!a.data.startsAt) return 1;
+    if (!b.data.startsAt) return -1;
+    return a.data.startsAt.getTime() - b.data.startsAt.getTime();
+  })
+  .slice(0, 3);
+
+/**
+ * Разметка события.
+ *
+ * Schema.org требует у Event поле startDate. У анонсов без даты
+ * (`dateTba`) его взять неоткуда, а выдумывать нельзя — поэтому такие
+ * страницы отдают только хлебные крошки и данные заведения.
+ * Невалидный Event хуже отсутствующего: он попадает в отчёты
+ * об ошибках и тянет за собой остальную разметку.
+ */
+const eventSchema = d.startsAt && {
+  '@context': 'https://schema.org',
+  '@type': 'Event',
+  name: d.title,
+  description: d.summary ?? site.description,
+  image: new URL(ogPoster.src, site.url).href,
+  eventStatus: 'https://schema.org/EventScheduled',
+  eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+  startDate: isoDate(d.startsAt),
+  ...(d.endsAt ? { endDate: isoDate(d.endsAt) } : {}),
+  location: {
+    '@type': 'Place',
+    name: `${site.name} — ${d.venue}`,
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: site.contacts.address.street,
+      addressLocality: site.contacts.address.city,
+      addressRegion: site.contacts.address.region,
+      postalCode: site.contacts.address.postalCode,
+      addressCountry: site.contacts.address.country,
+    },
+    geo: {
+      '@type': 'GeoCoordinates',
+      latitude: site.contacts.geo.latitude,
+      longitude: site.contacts.geo.longitude,
+    },
+  },
+  organizer: { '@type': 'Organization', name: site.name, url: site.url },
+  ...(d.lineup.length
+    ? { performer: d.lineup.map((name) => ({ '@type': 'PerformingGroup', name })) }
+    : {}),
+  /**
+   * Offer выводится только тогда, когда цена действительно известна.
+   * У Offer обязательна цена, а на прошедшее событие ещё и нельзя
+   * заявлять InStock — «в наличии» то, чего уже не будет.
+   */
+  ...(d.free
+    ? {
+        offers: {
+          '@type': 'Offer',
+          url: d.ticketUrl ?? site.reservations.telegram,
+          price: 0,
+          priceCurrency: 'RUB',
+          availability: upcoming
+            ? 'https://schema.org/InStock'
+            : 'https://schema.org/SoldOut',
+        },
+      }
+    : {}),
+  typicalAgeRange: `${d.ageLimit}-`,
+};
+
+const breadcrumbs = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Главная', item: `${site.url}/` },
+    { '@type': 'ListItem', position: 2, name: 'Афиша', item: `${site.url}/afisha/` },
+    { '@type': 'ListItem', position: 3, name: d.title },
+  ],
+};
+
+const metaDescription = [
+  d.summary,
+  d.startsAt ? `${formatDayYear(d.startsAt)}, ${formatTime(d.startsAt)}.` : d.dateNote,
+  `${site.name}, ${site.contacts.address.full}.`,
+]
+  .filter(Boolean)
+  .join(' ')
+  .slice(0, 300);
+---
+
+<BaseLayout
+  title={d.title}
+  description={metaDescription}
+  image={ogPoster.src}
+  imageAlt={d.posterAlt}
+  imageWidth={1200}
+  imageHeight={630}
+  type="article"
+  schema={eventSchema ? [eventSchema, breadcrumbs] : [breadcrumbs]}
+>
+  <article class="event">
+    <nav class="container event__crumbs" aria-label="Хлебные крошки">
+      <ol role="list">
+        <li><a href={withBase("/")}>Главная</a></li>
+        <li><a href={withBase("/afisha")}>Афиша</a></li>
+        <li aria-current="page">{d.title}</li>
+      </ol>
+    </nav>
+
+    <div class="container event__grid">
+      <div class="event__poster">
+        <Image
+          src={d.poster}
+          alt={d.posterAlt}
+          widths={[420, 640, 900]}
+          width={900}
+          height={900}
+          sizes="(min-width: 62rem) 28rem, 92vw"
+          quality={78}
+          loading="eager"
+          fetchpriority="high"
+          class="event__poster-img"
+        />
+      </div>
+
+      <div class="event__main">
+        <p class="event__kind eyebrow">{d.kind}</p>
+        <h1 class="event__title">{d.title}</h1>
+
+        {d.summary && <p class="event__summary">{d.summary}</p>}
+
+        <dl class="event__facts">
+          <div class="event__fact">
+            <dt>Когда</dt>
+            <dd>
+              {
+                d.startsAt ? (
+                  <time datetime={isoDate(d.startsAt)}>{formatFull(d.startsAt)}</time>
+                ) : (
+                  <span>{d.dateNote ?? 'Дату объявим в Telegram'}</span>
+                )
+              }
+            </dd>
+          </div>
+
+          <div class="event__fact">
+            <dt>Где</dt>
+            <dd>
+              {d.venue} ·{' '}
+              <a href={site.contacts.maps} target="_blank" rel="noopener noreferrer">
+                {site.contacts.address.streetShort}
+              </a>
+            </dd>
+          </div>
+
+          <div class="event__fact">
+            <dt>Вход</dt>
+            <dd>{d.free ? 'Свободный' : (d.price ?? 'По брони стола')} · {d.ageLimit}+</dd>
+          </div>
+
+          {
+            d.lineup.length > 0 && (
+              <div class="event__fact">
+                <dt>Кто играет</dt>
+                <dd>{d.lineup.join(', ')}</dd>
+              </div>
+            )
+          }
+        </dl>
+
+        <div class="event__actions">
+          <Button
+            href={d.ticketUrl ?? site.reservations.telegram}
+            variant="primary"
+            size="lg"
+            external
+          >
+            {d.ticketLabel}
+          </Button>
+          <Button href={site.contacts.phone.href} variant="ghost" size="lg">
+            {site.contacts.phone.display}
+          </Button>
+        </div>
+
+        {
+          !upcoming && (
+            <p class="event__passed">
+              Это событие уже прошло. Загляните в <a href={withBase("/afisha")}>афишу</a> — там ближайшие вечера.
+            </p>
+          )
+        }
+
+        <div class="event__body prose">
+          <Content />
+        </div>
+      </div>
+    </div>
+
+    {
+      related.length > 0 && (
+        <section class="section event__related">
+          <div class="container">
+            <h2 class="event__related-title">Ещё в афише</h2>
+            <ul class="event__related-grid" role="list">
+              {related.map((e) => (
+                <li>
+                  <EventCard event={e} />
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )
+    }
+  </article>
+</BaseLayout>
+
+<style>
+  .event__crumbs {
+    padding-block: var(--space-m);
+    font-size: var(--step--2);
+    color: var(--c-fg-muted);
+  }
+
+  .event__crumbs ol {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5em;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .event__crumbs li + li::before {
+    content: '/';
+    margin-inline-end: 0.5em;
+    opacity: 0.5;
+  }
+
+  .event__crumbs a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .event__crumbs a:hover {
+    color: var(--c-brass);
+  }
+
+  .event__grid {
+    display: grid;
+    gap: var(--space-xl);
+    padding-block-end: var(--space-2xl);
+    align-items: start;
+  }
+
+  @media (min-width: 62rem) {
+    .event__grid {
+      grid-template-columns: 28rem 1fr;
+      gap: var(--space-2xl);
+    }
+    .event__poster {
+      position: sticky;
+      inset-block-start: calc(var(--header-h, 72px) + var(--space-m));
+    }
+  }
+
+  .event__poster-img {
+    inline-size: 100%;
+    border-radius: var(--radius-l);
+    border: 1px solid var(--c-line);
+  }
+
+  .event__title {
+    margin-block-start: var(--space-2xs);
+    font-size: var(--step-5);
+    text-transform: uppercase;
+  }
+
+  .event__summary {
+    max-inline-size: 52ch;
+    margin-block-start: var(--space-s);
+    font-size: var(--step-1);
+    color: var(--c-paper-dim);
+  }
+
+  .event__facts {
+    display: grid;
+    gap: 0;
+    margin-block-start: var(--space-l);
+    border-block-start: 1px solid var(--c-line);
+  }
+
+  .event__fact {
+    display: grid;
+    grid-template-columns: 9rem 1fr;
+    gap: var(--space-s);
+    padding-block: var(--space-s);
+    border-block-end: 1px solid var(--c-line);
+  }
+
+  @media (max-width: 32rem) {
+    .event__fact {
+      grid-template-columns: 1fr;
+      gap: 0.25rem;
+    }
+  }
+
+  .event__fact dt {
+    font-size: var(--step--2);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--c-fg-muted);
+    padding-block-start: 0.2em;
+  }
+
+  .event__fact dd {
+    margin: 0;
+    color: var(--c-paper);
+  }
+
+  .event__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2xs);
+    margin-block-start: var(--space-l);
+  }
+
+  .event__passed {
+    margin-block-start: var(--space-m);
+    padding: var(--space-s) var(--space-m);
+    background: var(--c-surface);
+    border: 1px solid var(--c-line);
+    border-radius: var(--radius-m);
+    color: var(--c-paper-dim);
+    font-size: var(--step--1);
+  }
+
+  .event__body {
+    margin-block-start: var(--space-l);
+    max-inline-size: var(--measure);
+    color: var(--c-paper-dim);
+  }
+
+  .event__related {
+    border-block-start: 1px solid var(--c-line);
+  }
+
+  .event__related-title {
+    margin-block-end: var(--space-m);
+    font-size: var(--step-3);
+    text-transform: uppercase;
+  }
+
+  .event__related-grid {
+    display: grid;
+    gap: var(--space-m);
+    grid-template-columns: repeat(auto-fill, minmax(min(17rem, 100%), 1fr));
+    margin: 0;
+  }
+</style>

@@ -1,0 +1,342 @@
+---
+import { Image } from 'astro:assets';
+import type { CollectionEntry } from 'astro:content';
+import { dayBadge, formatTime, isoDate } from '@/lib/datetime';
+import { withBase } from '@/lib/url';
+
+interface Props {
+  event: CollectionEntry<'events'>;
+  /** Первые карточки на экране грузятся сразу, остальные — лениво. */
+  eager?: boolean;
+  featured?: boolean;
+}
+
+const { event, eager = false, featured = false } = Astro.props;
+const d = event.data;
+
+const badge = d.startsAt ? dayBadge(d.startsAt) : null;
+const href = withBase(`/afisha/${event.id}`);
+
+/**
+ * Ширина задаётся явно: без неё в атрибут src попадал исходник постера
+ * 1680×1680 (около 300 КБ) — то есть резервный файл был вчетверо
+ * тяжелее самого крупного варианта из srcset.
+ */
+const width = featured ? 1040 : 720;
+const height = featured ? 693 : 900;
+---
+
+<article class:list={['card', featured && 'card--featured']} data-reveal>
+    <div class="card__media">
+      <Image
+        src={d.poster}
+        alt=""
+        widths={featured ? [480, 720, 1040] : [320, 480, 720]}
+        width={width}
+        height={height}
+        sizes={
+          featured
+            ? '(min-width: 60rem) 40rem, 100vw'
+            : '(min-width: 60rem) 22rem, (min-width: 40rem) 45vw, 90vw'
+        }
+        quality={72}
+        loading={eager ? 'eager' : 'lazy'}
+        fetchpriority={eager ? 'high' : 'auto'}
+        decoding="async"
+        class="card__img"
+      />
+
+      {
+        badge && (
+          <time class="card__date" datetime={isoDate(d.startsAt!)}>
+            <span class="card__date-day">{badge.day}</span>
+            <span class="card__date-month">{badge.month}</span>
+          </time>
+        )
+      }
+
+      {d.dateTba && <span class="card__date card__date--tba">скоро</span>}
+
+      {/* «Сегодня» и «завтра» считаются в браузере, а не на сборке:
+          сайт статический, и вмороженный в HTML бейдж на следующий день
+          врал бы каждому посетителю. */}
+      {
+        d.startsAt && (
+          <span class="card__soon" data-soon data-starts={isoDate(d.startsAt)} hidden />
+        )
+      }
+    </div>
+
+    <div class="card__body">
+      <p class="card__meta">
+        <span class="card__kind">{d.kind}</span>
+        <span class="card__dot" aria-hidden="true">·</span>
+        <span>{d.venue}</span>
+        {
+          d.startsAt && (
+            <>
+              <span class="card__dot" aria-hidden="true">
+                ·
+              </span>
+              <span class="card__time">{formatTime(d.startsAt)}</span>
+            </>
+          )
+        }
+      </p>
+
+      <h3 class="card__title">
+        {/* Ссылкой обёрнут только заголовок — её имя в списке ссылок
+            должно быть названием события, а не всей карточкой целиком.
+            Кликается при этом вся плашка: см. .card__link::after. */}
+        <a class="card__link" href={href}>{d.title}</a>
+      </h3>
+
+      {d.summary && <p class="card__summary">{d.summary}</p>}
+
+      <p class="card__cta" aria-hidden="true">
+        Подробнее
+        <svg viewBox="0 0 16 10" class="card__arrow" fill="none">
+          <path
+            d="M0 5 H14 M10 1 L14 5 L10 9"
+            stroke="currentColor"
+            stroke-width="1.2"
+            stroke-linecap="square"
+          />
+        </svg>
+      </p>
+    </div>
+</article>
+
+<script>
+  // Бейдж срочности. Считаем по календарю Екатеринбурга, а не по часам
+  // посетителя: «сегодня» — это сегодня в баре, а не в Калининграде.
+  const TZ = 'Asia/Yekaterinburg';
+  const dayKey = (date: Date) =>
+    new Intl.DateTimeFormat('ru-RU', {
+      timeZone: TZ,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(date);
+
+  const now = new Date();
+  const today = dayKey(now);
+  const tomorrow = dayKey(new Date(now.getTime() + 24 * 60 * 60 * 1000));
+
+  for (const el of document.querySelectorAll<HTMLElement>('[data-soon]')) {
+    const raw = el.dataset.starts;
+    if (!raw) continue;
+    const key = dayKey(new Date(raw));
+    const label = key === today ? 'сегодня' : key === tomorrow ? 'завтра' : null;
+    if (!label) continue;
+    el.textContent = label;
+    el.hidden = false;
+  }
+</script>
+
+<style>
+  .card {
+    --card-radius: var(--radius-l);
+    position: relative;
+    /* Сетка: постер, тело, кнопка. */
+    display: grid;
+    grid-template-rows: auto 1fr;
+    background: var(--c-surface);
+    border: 1px solid var(--c-line);
+    border-radius: var(--card-radius);
+    overflow: hidden;
+    transition:
+      border-color var(--dur-base) var(--ease-out),
+      transform var(--dur-base) var(--ease-out),
+      box-shadow var(--dur-base) var(--ease-out);
+  }
+
+  .card:hover {
+    border-color: var(--c-brass-dim);
+    box-shadow: var(--shadow-mid);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .card:hover {
+      transform: translateY(-3px);
+    }
+  }
+
+  .card__link {
+    text-decoration: none;
+    color: inherit;
+  }
+  .card__link:hover {
+    color: var(--c-brass-bright);
+  }
+
+  /* Растянутая область клика. Ссылка остаётся одна и с коротким именем,
+     а нажать можно в любом месте плашки. Текст при этом выделяется
+     мышью — целиком обёрнутая карточка этого не позволяла. */
+  .card__link::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+  }
+
+  .card:focus-within {
+    border-color: var(--c-brass);
+  }
+  .card__link:focus-visible {
+    outline-offset: 2px;
+  }
+
+  .card__media {
+    position: relative;
+    grid-row: 1;
+    aspect-ratio: 4 / 5;
+    overflow: hidden;
+    background: var(--c-surface-2);
+  }
+
+  .card--featured .card__media {
+    aspect-ratio: 3 / 2;
+  }
+
+  .card__img {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+    transition: transform var(--dur-slow) var(--ease-out);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .card:hover .card__img,
+    .card:focus-within .card__img {
+      transform: scale(1.03);
+    }
+  }
+
+  /* Отрывной календарь поверх постера. */
+  .card__date {
+    position: absolute;
+    inset-block-start: var(--space-xs);
+    inset-inline-start: var(--space-xs);
+    display: grid;
+    justify-items: center;
+    gap: 0.05em;
+    padding: 0.45rem 0.6rem;
+    background: color-mix(in oklab, var(--c-void) 78%, transparent);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--c-brass-wash);
+    border-radius: var(--radius-m);
+    color: var(--c-paper);
+    line-height: 1;
+  }
+
+  .card__date-day {
+    font-family: var(--font-display);
+    font-size: var(--step-2);
+    font-weight: 300;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .card__date-month {
+    font-size: var(--step--2);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--c-brass);
+  }
+
+  .card__date--tba {
+    font-family: var(--font-display);
+    font-size: var(--step--2);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--c-brass);
+    padding: 0.55rem 0.7rem;
+  }
+
+  .card__soon {
+    position: absolute;
+    inset-block-start: var(--space-xs);
+    inset-inline-end: var(--space-xs);
+    padding: 0.3rem 0.6rem;
+    background: var(--c-red);
+    color: #fff;
+    font-family: var(--font-display);
+    font-size: var(--step--2);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border-radius: var(--radius-pill);
+  }
+
+  .card__body {
+    display: grid;
+    align-content: start;
+    gap: 0.5rem;
+    padding: var(--space-m) var(--space-s) var(--space-m);
+  }
+
+  .card__meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.4em;
+    font-size: var(--step--2);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--c-fg-muted);
+  }
+
+  .card__kind {
+    color: var(--c-brass);
+  }
+
+  .card__time {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .card__dot {
+    opacity: 0.5;
+  }
+
+  .card__title {
+    font-size: var(--step-1);
+    font-weight: 300;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+  }
+
+  .card--featured .card__title {
+    font-size: var(--step-3);
+  }
+
+  .card__summary {
+    font-size: var(--step--1);
+    color: var(--c-paper-dim);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .card__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5em;
+    margin-block-start: 0.35rem;
+    font-family: var(--font-display);
+    font-size: var(--step--2);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--c-brass);
+  }
+
+  .card__arrow {
+    inline-size: 1.1em;
+    transition: transform var(--dur-base) var(--ease-out);
+  }
+
+  .card:hover .card__arrow,
+  .card:focus-within .card__arrow {
+    transform: translateX(4px);
+  }
+</style>
