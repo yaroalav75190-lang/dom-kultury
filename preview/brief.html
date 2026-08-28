@@ -1,0 +1,952 @@
+<title>Съёмка и контент</title>
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+/>
+
+<style>
+  /* ==========================================================
+     Производственный бриф.
+
+     Рабочий документ: его пересылают фотографу и по нему ставят
+     галочки. Отсюда светлая «бумажная» подложка, инженерный Plex
+     и латунный акцент из фирменной палитры заведения — чтобы
+     документ читался как часть проекта, а не как чужой файл.
+     ========================================================== */
+
+  :root {
+    --paper: #f2f2ef;
+    --card: #ffffff;
+    --card-2: #e9e9e4;
+    --ink: #16191a;
+    --muted: #5a615f;
+    --line: #d6d7d1;
+    --accent: #8a6a2b;
+    --accent-soft: rgba(138, 106, 43, 0.1);
+    --urgent: #a5341f;
+    --urgent-soft: rgba(165, 52, 31, 0.09);
+    --shadow: 0 1px 2px rgba(20, 25, 22, 0.06);
+
+    --font-ui: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --paper: #16191a;
+      --card: #1f2324;
+      --card-2: #272c2d;
+      --ink: #e9eae6;
+      --muted: #9aa29d;
+      --line: #333a3b;
+      --accent: #c8a96a;
+      --accent-soft: rgba(200, 169, 106, 0.14);
+      --urgent: #e8735a;
+      --urgent-soft: rgba(232, 115, 90, 0.12);
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    }
+  }
+
+  :root[data-theme='dark'] {
+    --paper: #16191a;
+    --card: #1f2324;
+    --card-2: #272c2d;
+    --ink: #e9eae6;
+    --muted: #9aa29d;
+    --line: #333a3b;
+    --accent: #c8a96a;
+    --accent-soft: rgba(200, 169, 106, 0.14);
+    --urgent: #e8735a;
+    --urgent-soft: rgba(232, 115, 90, 0.12);
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    font-size: 15.5px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .sheet {
+    max-width: 62rem;
+    margin-inline: auto;
+    padding: clamp(1.25rem, 0.8rem + 2vw, 3rem);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(2rem, 1.4rem + 2vw, 3.25rem);
+  }
+
+  /* ---------- Шапка ---------- */
+  .head__eyebrow {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .head__title {
+    margin: 0.4rem 0 0;
+    font-size: clamp(1.6rem, 1.2rem + 1.8vw, 2.4rem);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    text-wrap: balance;
+  }
+
+  .head__lede {
+    margin: 0.75rem 0 0;
+    max-width: 62ch;
+    color: var(--muted);
+  }
+
+  .progress {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+    padding: 0.65rem 0.9rem;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    color: var(--muted);
+  }
+
+  .progress__bar {
+    flex: 1;
+    height: 5px;
+    min-width: 4rem;
+    background: var(--card-2);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  .progress__fill {
+    display: block;
+    height: 100%;
+    width: 0;
+    background: var(--accent);
+    transition: width 220ms ease;
+  }
+
+  .progress button {
+    padding: 0.25rem 0.6rem;
+    background: none;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: inherit;
+    font: inherit;
+    font-size: 0.78rem;
+    cursor: pointer;
+  }
+  .progress button:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* ---------- Срочное ---------- */
+  .urgent {
+    padding: 1rem 1.15rem;
+    background: var(--urgent-soft);
+    border: 1px solid color-mix(in oklab, var(--urgent) 35%, transparent);
+    border-radius: 10px;
+  }
+
+  .urgent__title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--urgent);
+  }
+
+  .urgent p {
+    margin: 0.4rem 0 0;
+    max-width: 68ch;
+  }
+
+  /* ---------- Разделы ---------- */
+  .section__num {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--accent);
+  }
+
+  .section__title {
+    margin: 0.2rem 0 0;
+    font-size: clamp(1.15rem, 1rem + 0.6vw, 1.5rem);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .section__intro {
+    margin: 0.6rem 0 1.5rem;
+    max-width: 68ch;
+    color: var(--muted);
+  }
+
+  .group {
+    margin-bottom: 1.75rem;
+  }
+
+  .group__title {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    margin: 0 0 0.15rem;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .group__count {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    font-weight: 400;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+
+  .group__why {
+    margin: 0 0 0.85rem;
+    max-width: 68ch;
+    font-size: 0.92rem;
+    color: var(--muted);
+  }
+
+  /* ---------- Пункты ---------- */
+  .items {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .item {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 0.4rem 0.85rem;
+    align-items: start;
+    padding: 0.7rem 0.9rem;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    box-shadow: var(--shadow);
+  }
+
+  .item:has(input:checked) {
+    background: var(--card-2);
+    border-color: color-mix(in oklab, var(--accent) 30%, var(--line));
+  }
+
+  .item input {
+    inline-size: 18px;
+    block-size: 18px;
+    margin: 0.22rem 0 0;
+    accent-color: var(--accent);
+    cursor: pointer;
+    flex: none;
+  }
+
+  .item__body {
+    min-width: 0;
+  }
+
+  .item__what {
+    font-weight: 500;
+  }
+
+  .item:has(input:checked) .item__what {
+    text-decoration: line-through;
+    text-decoration-color: color-mix(in oklab, var(--muted) 60%, transparent);
+    color: var(--muted);
+  }
+
+  .item__where {
+    margin: 0.15rem 0 0;
+    font-size: 0.88rem;
+    color: var(--muted);
+  }
+
+  .item__meta {
+    justify-self: end;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.15rem;
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .item__qty {
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  @media (max-width: 34rem) {
+    .item {
+      grid-template-columns: auto 1fr;
+    }
+    .item__meta {
+      grid-column: 2;
+      flex-direction: row;
+      gap: 0.75rem;
+      justify-self: start;
+    }
+  }
+
+  /* ---------- Требования ---------- */
+  .specs {
+    display: grid;
+    gap: 0.6rem;
+    grid-template-columns: repeat(auto-fit, minmax(min(15rem, 100%), 1fr));
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .spec {
+    padding: 0.85rem 1rem;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+  }
+
+  .spec dt {
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .spec dd {
+    margin: 0.3rem 0 0;
+    font-size: 0.92rem;
+  }
+
+  /* ---------- Уникальность ---------- */
+  .angle {
+    padding: 1.1rem 1.25rem;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    border-radius: 4px 9px 9px 4px;
+    margin-bottom: 0.75rem;
+  }
+
+  .angle__title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .angle p {
+    margin: 0.4rem 0 0;
+    max-width: 70ch;
+    color: var(--muted);
+  }
+
+  .angle strong {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    padding: 0.08em 0.32em;
+    background: var(--card-2);
+    border-radius: 4px;
+  }
+
+  a {
+    color: var(--accent);
+  }
+
+  .foot {
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--line);
+    font-size: 0.88rem;
+    color: var(--muted);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  @media print {
+    .progress {
+      display: none;
+    }
+    .item {
+      break-inside: avoid;
+    }
+  }
+</style>
+
+<div class="sheet">
+  <header>
+    <p class="head__eyebrow">Дом культуры · производственный бриф</p>
+    <h1 class="head__title">Что снять и что уточнить, чтобы сайт стал своим</h1>
+    <p class="head__lede">
+      Сайт собран и работает, но наполнен тем, что удалось снять со старой версии:
+      три фотографии и данные из сканов меню. Ниже — ровно то, чего не хватает.
+      Список можно отдать фотографу как есть: у каждого кадра написано,
+      куда он встанет и зачем нужен.
+    </p>
+
+    <p class="progress">
+      <span id="progress-text">0 из 0 отмечено</span>
+      <span class="progress__bar"><span class="progress__fill" id="progress-fill"></span></span>
+      <button type="button" id="reset">Сбросить</button>
+    </p>
+  </header>
+
+  <section class="urgent">
+    <h2 class="urgent__title">Веранду нужно снять в ближайшие недели</h2>
+    <p>
+      Сегодня конец августа. Летняя веранда — это половина того, чем вы отличаетесь
+      от соседнего бара, и на сайте она сейчас показана кадром стола, снятым в помещении.
+      Если не снять сейчас, кадров сезона не будет до следующего лета, и раздел
+      «Пространства» останется наполовину пустым десять месяцев.
+    </p>
+  </section>
+
+  <section>
+    <p class="section__num">01</p>
+    <h2 class="section__title">Съёмка</h2>
+    <p class="section__intro">
+      Всего около 60 кадров. Главное — снять зал в вечер события, с людьми:
+      сейчас по сайту невозможно понять формат, а это первый вопрос человека,
+      который выбирает между вами и другим местом. Тихий гастробар и бар
+      с программой до шести утра — разные решения.
+    </p>
+
+    <div class="group">
+      <h3 class="group__title">
+        Зал в вечер события <span class="group__count">6–8 кадров</span>
+      </h3>
+      <p class="group__why">
+        Самая важная группа. Отвечает на вопрос «что здесь происходит вечером»
+        и подтверждает всё, что написано текстом.
+      </p>
+      <ul class="items">
+        <li class="item">
+          <input type="checkbox" id="s1" />
+          <span class="item__body">
+            <label class="item__what" for="s1">Общий план зала во время выступления, с гостями</label>
+            <span class="item__where">Обложка главной — сейчас там кадр с растениями без людей</span>
+          </span>
+          <span class="item__meta"><span class="item__qty">2–3</span><span>горизонталь</span></span>
+        </li>
+        <li class="item">
+          <input type="checkbox" id="s2" />
+          <span class="item__body">
+            <label class="item__what" for="s2">Сцена со стороны зала: артист и зрители за столами</label>
+            <span class="item__where">«Пространства», карточка «Основной зал»</span>
+          </span>
+          <span class="item__meta"><span class="item__qty">2</span><span>4:3</span></span>
+        </li>
+        <li class="item">
+          <input type="checkbox" id="s3" />
+          <span class="item__body">
+            <label class="item__what" for="s3">Зал с высокой точки: видно посадку и заполненность</label>
+            <span class="item__where">Страница банкетов — организатору нужно оценить масштаб</span>
+          </span>
+          <span class="item__meta"><span class="item__qty">1–2</span><span>горизонталь</span></span>
+        </li>
+        <li class="item">
+          <input type="checkbox" id="s4" />
+          <span class="item__body">
+            <label class="item__what" for="s4">Реакция зала: смех, аплодисменты, крупные планы гостей</label>
+            <span class="item__where">Карточки событий, соцсети</span>
+          </span>
+          <span class="item__meta"><span class="item__qty">2–3</span><span>любая</span></span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="group">
+      <h3 class="group__title">
+        Летняя веранда <span class="group__count">4–6 кадров</span>
+      </h3>
+      <p class="group__why">
+        Снимать сейчас, пока сезон. Нужны и дневные, и вечерние кадры:
+        веранда продаёт два разных сценария.
+      </p>
+      <ul class="items">
+        <li class="item">
+          <input type="checkbox" id="s5" />
+          <span class="item__body">
+            <label class="item__what" for="s5">Веранда общим планом, с гостями, вечерний свет</label>
+            <span class="item__where">«Пространства», карточка «Летняя веранда»</span>
+          </span>
+          <span class="item__meta"><span class="item__qty">2</span><span>4:3</span></span>
+        </li>
+        <li class="item">
+          <input type="checkbox" id="s6" />
+          <span class="item__body">
+            <label class="item__what" for="s6">Стол на двоих: как это выглядит для свидания</label>
+            <span class="item__where">Блок «С чем сюда приходят», повод «Вдвоём»</span>
+          </span>
+          <span class="item__meta"><span class="item__qty">1–2</span><span>вертикаль</span></span>
+        </li>
+        <li class="item">
+          <input type="checkbox" id="s7" />
+          <span class="item__body">
+            <label class="item__what" for="s7">Большой стол с компанией</label>
+            <span class="item__where">Повод «Компанией», страница банкетов</span>
+          </span>
+          <span class="item__meta"><span class="item__qty">1–2</span><span>горизонталь</span></span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="group">
+      <h3 class="group__title">
+        Бар и коктейли <span class="group__count">12–14 кадров</span>
+      </h3>
+      <p class="group__why">
+        На главной есть блок с четырьмя авторскими коктейлями — сейчас это
+        только текст. С фотографиями он становится сильнейшим аргументом
+        на странице.
+      </p>
+      <ul class="items">
+        <li class="item">
+          <input type="checkbox" id="s8" />
+          <span class="item__body">
+            <label class="item__what" for="s8">Четыре витринных коктейля крупно, по одному в кадре</label>
+            <span class="item__where">«Морской гимлет», «Путь таёжного кочевника», «Башня ветров», «Вечерний бранч»</span>
+          </span>
+          <span class="item__meta"><span class="item__qty">4</span><span>вертикаль</span></span>
+        </li>
+        <li class="item">
+          <input type="checkbox" id="s9" />
+          <span class="item__body">
+            <label class="item__what" for="s9">Ещё 4–6 коктейлей из карты на замену и для соцсетей</label>
+            <span class="item__where">Запас: карта меняется, фото должно быть чем заменить</span>
+          </span>
+          <span class="item__meta"><span class="item__qty">4–6</span><span>вертикаль</span></span>
+        </li>
+        <li class="item">
+          <input type="checkbox" id="s10" />
+          <span class="item__body">
+            <label class="item__what" for="s10">Бармен за работой: руки, лёд, розлив</label>
+            <span class="item__where">Блок барной карты, страница «О доме»</span>
+          </span>
+          <span class="item__meta"><span class="item__qty">2–3</span><span>любая</span></span>
+        </li>
+        <li class="item">
+          <input type="checkbox" id="s11" />
+          <span class="item__body">
+            <label class="item__what" for="s11">Настойки: ряд бутылей, видно ягоды и травы</label>
+            <span class="item__where">Раздел настоек — 10 позиций по 270 ₽, сейчас без единого кадра</span>
+          </span>
+          <span class="item__meta"><span class="item__qty">1–2</span><span>горизонталь</span></span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="group">
+      <h3 class="group__title">
+        Кухня <span class="group__count">14–16 кадров</span>
+      </h3>
+      <p class="group__why">
+        В меню 266 позиций и ни одной фотографии. Снимать не всё —
+        только те блюда, которые вы сами советуете первыми.
+      </p>
+      <ul class="items">
+        <li class="item">
+          <input type="checkbox" id="s12" />
+          <span class="item__body">
+            <label class="item__what" for="s12">10–12 хитов: тар-тары, стейк тунца, драники, утиная ножка, шатобриан, десерты</label>
+            <span class="item__where">Блок «Что заказать в первый раз» на странице меню</span>
+          </span>
+          <span class="item__meta"><span class="item__qty">10–12</span><span>квадрат</span></span>
+        </li>
+        <li class="item">
+          <input type="checkbox" id="s13" />
+          <span class="item__body">
+            <label class="item__what" for="s13">Бранч: сэндвич и яичный конструктор</label>
+            <span class="item__where">Блок бранчей — предложение выходного дня, сейчас только текстом</span>
+          </span>
+          <span class="item__meta"><span class="item__qty">2–3</span><span>квадрат</span></span>
+        </li>
+        <li class="item">
+          <input type="checkbox" id="s14" />
+          <span class="item__body">
+            <label class="item__what" for="s14">Стол на компанию: несколько блюд сверху</label>
+            <span class="item__where">Повод «Компанией», тизер кухни на главной</span>
+          </span>
+          <span class="item__meta"><span class="item__qty">2</span><span>горизонталь</span></span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="group">
+      <h3 class="group__title">
+        Банкет <span class="group__count">4–5 кадров</span>
+      </h3>
+      <p class="group__why">
+        Страница банкетов сейчас показывает прайс-лист. Корпоративный
+        заказчик собирает три-четыре предложения и отсеивает те,
+        где не видно, как это выглядит.
+      </p>
+      <ul class="items">
+        <li class="item">
+          <input type="checkbox" id="s15" />
+          <span class="item__body">
+            <label class="item__what" for="s15">Накрытый фуршетный стол целиком</label>
+            <span class="item__where">Обложка страницы банкетов</span>
+          </span>
+          <span class="item__meta"><span class="item__qty">1–2</span><span>горизонталь</span></span>
+        </li>
+        <li class="item">
+          <input type="checkbox" id="s16" />
+          <span class="item__body">
+            <label class="item__what" for="s16">Зал в банкетной рассадке до прихода гостей</label>
+            <span class="item__where">Блок «Как это устроено»</span>
+          </span>
+          <span class="item__meta"><span class="item__qty">1–2</span><span>горизонталь</span></span>
+        </li>
+        <li class="item">
+          <input type="checkbox" id="s17" />
+          <span class="item__body">
+            <label class="item__what" for="s17">Корпоратив или день рождения в процессе</label>
+            <span class="item__where">Форматы на странице банкетов</span>
+          </span>
+          <span class="item__meta"><span class="item__qty">1–2</span><span>любая</span></span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="group">
+      <h3 class="group__title">
+        Люди и место <span class="group__count">7–9 кадров</span>
+      </h3>
+      <p class="group__why">
+        То, что нельзя скопировать. Место с автором отличается
+        от «просто бара» сильнее, чем любое описание интерьера.
+      </p>
+      <ul class="items">
+        <li class="item">
+          <input type="checkbox" id="s18" />
+          <span class="item__body">
+            <label class="item__what" for="s18">Портрет шеф-повара, рабочий, не постановочный</label>
+            <span class="item__where">Страница «О доме», блок кухни</span>
+          </span>
+          <span class="item__meta"><span class="item__qty">1–2</span><span>вертикаль</span></span>
+        </li>
+        <li class="item">
+          <input type="checkbox" id="s19" />
+          <span class="item__body">
+            <label class="item__what" for="s19">Портрет бар-менеджера</label>
+            <span class="item__where">Блок барной карты</span>
+          </span>
+          <span class="item__meta"><span class="item__qty">1–2</span><span>вертикаль</span></span>
+        </li>
+        <li class="item">
+          <input type="checkbox" id="s20" />
+          <span class="item__body">
+            <label class="item__what" for="s20">Фасад и вход вечером, с включённой вывеской</label>
+            <span class="item__where">Страница контактов — человек ищет, куда зайти</span>
+          </span>
+          <span class="item__meta"><span class="item__qty">2</span><span>горизонталь</span></span>
+        </li>
+        <li class="item">
+          <input type="checkbox" id="s21" />
+          <span class="item__body">
+            <label class="item__what" for="s21">Детали: латунь, посуда, растения, фактуры стен</label>
+            <span class="item__where">Проложки между разделами, соцсети</span>
+          </span>
+          <span class="item__meta"><span class="item__qty">3</span><span>любая</span></span>
+        </li>
+      </ul>
+    </div>
+
+    <h3 class="group__title" style="margin-bottom: 0.85rem">Технические требования</h3>
+    <dl class="specs">
+      <div class="spec">
+        <dt>Размер</dt>
+        <dd>От 2400 px по длинной стороне. Сжатие сделает сборка сама.</dd>
+      </div>
+      <div class="spec">
+        <dt>Формат</dt>
+        <dd>JPEG высокого качества из RAW. Без пресетов и тяжёлых фильтров.</dd>
+      </div>
+      <div class="spec">
+        <dt>Свет</dt>
+        <dd>Вечерний, тёплый, как в зале. Накамерная вспышка в лоб убивает материал.</dd>
+      </div>
+      <div class="spec">
+        <dt>Люди</dt>
+        <dd>Нужны в кадре. Заранее возьмите письменное согласие на съёмку и публикацию.</dd>
+      </div>
+      <div class="spec">
+        <dt>Кадрирование</dt>
+        <dd>Оставляйте воздух по краям: сайт кадрирует под разные экраны.</dd>
+      </div>
+      <div class="spec">
+        <dt>Куда сложить</dt>
+        <dd>Папками по группам этого списка — так их сразу видно, куда ставить.</dd>
+      </div>
+    </dl>
+  </section>
+
+  <section>
+    <p class="section__num">02</p>
+    <h2 class="section__title">Информация</h2>
+    <p class="section__intro">
+      Вопросы, ответы на которые сейчас на сайте отсутствуют или взяты
+      из вторых рук. Первые четыре блокируют публикацию: без них часть
+      страниц остаётся неточной.
+    </p>
+
+    <div class="group">
+      <h3 class="group__title">
+        Обязательно перед публикацией <span class="group__count">4 вопроса</span>
+      </h3>
+      <ul class="items">
+        <li class="item">
+          <input type="checkbox" id="i1" />
+          <span class="item__body">
+            <label class="item__what" for="i1">Точный график работы</label>
+            <span class="item__where">На старом сайте он был указан по-разному в шапке и в подвале. Взят вариант из подвала — подтвердите или поправьте</span>
+          </span>
+        </li>
+        <li class="item">
+          <input type="checkbox" id="i2" />
+          <span class="item__body">
+            <label class="item__what" for="i2">Актуальные цены на чай, кофе и лимонады</label>
+            <span class="item__where">Старый сайт показывал две версии одной страницы одновременно: эспрессо 270 и 250 ₽, авторский чай 470 и 540 ₽</span>
+          </span>
+        </li>
+        <li class="item">
+          <input type="checkbox" id="i3" />
+          <span class="item__body">
+            <label class="item__what" for="i3">Реквизиты оператора персональных данных</label>
+            <span class="item__where">Наименование, ИНН, ОГРН, юридический адрес. Без них правовые страницы не имеют силы, а сайт принимает заявки</span>
+          </span>
+        </li>
+        <li class="item">
+          <input type="checkbox" id="i4" />
+          <span class="item__body">
+            <label class="item__what" for="i4">Сверка меню с кассой</label>
+            <span class="item__where">292 позиции перенесены распознаванием сканов. Ошибки возможны, особенно в длинных составах банкетного меню</span>
+          </span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="group">
+      <h3 class="group__title">
+        Условия, которых не хватает больше всего <span class="group__count">6 вопросов</span>
+      </h3>
+      <p class="group__why">
+        Главный барьер перед незнакомым местом — «во сколько мне это встанет
+        и как вообще попасть». Сейчас на карточках событий стоит честное
+        «уточним при брони», но человек, который не может прикинуть вечер
+        в деньгах, чаще не идёт вовсе.
+      </p>
+      <ul class="items">
+        <li class="item">
+          <input type="checkbox" id="i5" />
+          <span class="item__body">
+            <label class="item__what" for="i5">Есть ли депозит на столы в вечер с программой и сколько</label>
+            <span class="item__where">Строка «Вход» на каждой карточке события</span>
+          </span>
+        </li>
+        <li class="item">
+          <input type="checkbox" id="i6" />
+          <span class="item__body">
+            <label class="item__what" for="i6">Сколько держите бронь при опоздании</label>
+            <span class="item__where">Форма брони и правовая страница</span>
+          </span>
+        </li>
+        <li class="item">
+          <input type="checkbox" id="i7" />
+          <span class="item__body">
+            <label class="item__what" for="i7">Можно ли прийти без брони и в какие дни это рискованно</label>
+            <span class="item__where">Страница контактов</span>
+          </span>
+        </li>
+        <li class="item">
+          <input type="checkbox" id="i8" />
+          <span class="item__body">
+            <label class="item__what" for="i8">Вместимость: посадка, фуршет, от скольких человек выкуп зала</label>
+            <span class="item__where">Страница банкетов. Без этого корпоративный заказчик не понимает, влезет ли его компания, и уходит</span>
+          </span>
+        </li>
+        <li class="item">
+          <input type="checkbox" id="i9" />
+          <span class="item__body">
+            <label class="item__what" for="i9">Парковка и как добраться</label>
+            <span class="item__where">Страница контактов — сейчас там только ссылка на карту</span>
+          </span>
+        </li>
+        <li class="item">
+          <input type="checkbox" id="i10" />
+          <span class="item__body">
+            <label class="item__what" for="i10">Почта для банкетов и работаете ли по безналу</label>
+            <span class="item__where">Заявки на корпоративы идут письмом: счёт, договор, согласование с бухгалтерией. Сейчас на сайте нет ни одного адреса</span>
+          </span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="group">
+      <h3 class="group__title">
+        Тексты, которые может написать только заведение <span class="group__count">4 вопроса</span>
+      </h3>
+      <ul class="items">
+        <li class="item">
+          <input type="checkbox" id="i11" />
+          <span class="item__body">
+            <label class="item__what" for="i11">Описания событий: кто выступает, что происходит, для кого</label>
+            <span class="item__where">Все восемь карточек содержали заглушку «Описание, состав музыкантов». Карточку без этого не пересылают друзьям — а именно пересылка приводит компании</span>
+          </span>
+        </li>
+        <li class="item">
+          <input type="checkbox" id="i12" />
+          <span class="item__body">
+            <label class="item__what" for="i12">Составы блюд основного меню</label>
+            <span class="item__where">В банкетном меню составы есть, в основном почти нет. Гость не понимает, за что 850 ₽</span>
+          </span>
+        </li>
+        <li class="item">
+          <input type="checkbox" id="i13" />
+          <span class="item__body">
+            <label class="item__what" for="i13">Условия карты лояльности в цифрах</label>
+            <span class="item__where">Сколько процентов возвращается, что даётся за регистрацию. Сейчас блок не даёт причины нажать кнопку</span>
+          </span>
+        </li>
+        <li class="item">
+          <input type="checkbox" id="i14" />
+          <span class="item__body">
+            <label class="item__what" for="i14">Подтвердить факты о команде</label>
+            <span class="item__where">Городские медиа пишут: открылись в конце ноября 2025, команда бара «Негодяи», шеф-повар Евгений Бочков, около 130 мест. Не публикую без вашего слова — источники собраны в README</span>
+          </span>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <p class="section__num">03</p>
+    <h2 class="section__title">Что сделает сайт непохожим на другие</h2>
+    <p class="section__intro">
+      Уникальность не в вёрстке — её копируют за день. Она в том, чего
+      нет у соседнего бара. У вас есть три такие вещи, и две из них
+      сейчас на сайте почти не работают.
+    </p>
+
+    <div class="angle">
+      <h3 class="angle__title">Ботаника в барной карте</h3>
+      <p>
+        <strong>Гречишный джин, кордиал саган-дайля, пихта, облепиха, брусника,
+        травяные биттеры.</strong> Это не «большая коктейльная карта», это
+        конкретная и редкая история, которая уже существует — она была
+        запечатана внутри сканов и не работала вообще. Сейчас четыре коктейля
+        вынесены на главную. Чтобы это стало настоящим отличием, нужно ответить:
+        откуда травы и ягоды, кто их собирает, что придумано именно здесь.
+        Одна честная фраза про саган-дайля стоит абзаца про атмосферу.
+      </p>
+    </div>
+
+    <div class="angle">
+      <h3 class="angle__title">Бар, у которого есть сцена</h3>
+      <p>
+        Это редкое сочетание, и оно продаётся только живой афишей.
+        <strong>Сейчас впереди одно событие.</strong> Полупустая афиша сообщает
+        «здесь ничего не происходит» и обнуляет всё остальное на сайте, включая
+        рейтинг 4,8. Держите шесть-восемь будущих дат — это важнее любого
+        нового блока, который я могу добавить.
+      </p>
+    </div>
+
+    <div class="angle">
+      <h3 class="angle__title">Люди, которые за этим стоят</h3>
+      <p>
+        Имя шефа, имя бармена, кто и зачем открыл это место, что было здесь
+        раньше. <strong>Это единственное, что конкурент не скопирует.</strong>
+        Сейчас на сайте нет ни одного имени — место выглядит безымянным.
+        Нужны два портрета и по абзацу текста от каждого.
+      </p>
+    </div>
+  </section>
+
+  <p class="foot">
+    Список отмечается прямо здесь — отметки сохраняются в этом браузере.
+    Полная версия задач с источниками — в файле <code>README.md</code> в проекте.
+  </p>
+</div>
+
+<script>
+  const boxes = [...document.querySelectorAll('.item input[type="checkbox"]')];
+  const text = document.getElementById('progress-text');
+  const fill = document.getElementById('progress-fill');
+  const reset = document.getElementById('reset');
+  const KEY = 'dk-brief-v1';
+
+  // Отметки живут в браузере того, кто открыл документ: список
+  // проходят в несколько заходов, и терять его при перезагрузке обидно.
+  function load() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(KEY) || '[]');
+      for (const box of boxes) box.checked = saved.includes(box.id);
+    } catch {
+      /* приватный режим или запрет на хранение — просто начинаем с чистого */
+    }
+  }
+
+  function save() {
+    try {
+      localStorage.setItem(KEY, JSON.stringify(boxes.filter((b) => b.checked).map((b) => b.id)));
+    } catch {
+      /* не сохранилось — на работу со списком это не влияет */
+    }
+  }
+
+  function render() {
+    const done = boxes.filter((b) => b.checked).length;
+    text.textContent = `${done} из ${boxes.length} отмечено`;
+    fill.style.width = boxes.length ? `${(done / boxes.length) * 100}%` : '0';
+  }
+
+  for (const box of boxes) {
+    box.addEventListener('change', () => {
+      save();
+      render();
+    });
+  }
+
+  reset.addEventListener('click', () => {
+    for (const box of boxes) box.checked = false;
+    save();
+    render();
+  });
+
+  load();
+  render();
+</script>
